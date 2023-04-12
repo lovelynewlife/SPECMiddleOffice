@@ -14,6 +14,9 @@ class BenchmarksSpider(scrapy.Spider):
     }
 
     def parse(self, response):
-        benchmarks = response.xpath('//select[@name="URL"]//option/@value')
-        for elem in benchmarks:
-            yield BenchmarkItem(name=elem.extract())
+        options = response.xpath('//select[@name="URL"]//option')
+        full_names = options.xpath('./text()').extract()
+        names = options.xpath('./@value').extract()
+        assert len(full_names) == len(names)
+        for full_name, name in zip(full_names, names):
+            yield BenchmarkItem(full_name=full_name, name=name)

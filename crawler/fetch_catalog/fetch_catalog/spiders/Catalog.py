@@ -15,7 +15,8 @@ class CatalogSpider(scrapy.Spider):
         with open(os.path.join(data_root_path, "benchmarks.txt"), "r") as bf:
             benchmarks = bf.readlines()
             for elem in benchmarks:
-                query_string = f"conf={elem.strip()};op=dump;format=pre"
+                conf = elem.strip().split("|")[0]
+                query_string = f"conf={conf};op=dump;format=pre"
                 print(query_string)
                 catalog_url = self.BASE_URL + '?' + query_string
                 logging.info(f"start crawling catalog {elem.strip()}:{catalog_url}")

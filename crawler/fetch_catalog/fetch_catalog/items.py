@@ -9,4 +9,5 @@ import scrapy
 class BenchmarkItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
+    full_name = scrapy.Field()
     name = scrapy.Field()

@@ -28,7 +28,7 @@ class FetchBenchmarkPipeline:
 
     def process_item(self, item, spider):
         logging.info(f"writing benchmark: {item}")
-        self.file.write(item["name"].strip()+"\n")
+        self.file.write(f"{item['name'].strip()}|{item['full_name'].strip()}\n")
         return item
 
     def close_spider(self, spider):
