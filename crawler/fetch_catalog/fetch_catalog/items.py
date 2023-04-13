@@ -11,3 +11,8 @@ class BenchmarkItem(scrapy.Item):
     # name = scrapy.Field()
     full_name = scrapy.Field()
     name = scrapy.Field()
+
+
+class CatalogItem(scrapy.Item):
+    title = scrapy.Field()
+    content = scrapy.Field()

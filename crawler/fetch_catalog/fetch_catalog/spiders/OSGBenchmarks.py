@@ -3,11 +3,12 @@ import scrapy
 from ..items import BenchmarkItem
 
 
-class BenchmarksSpider(scrapy.Spider):
-    name = "Benchmarks"
+class OSGBenchmarksSpider(scrapy.Spider):
+    name = "OSGBenchmarks"
     allowed_domains = ["spec.org"]
     start_urls = ["https://spec.org/cgi-bin/osgresults"]
     custom_settings = {
+        "GROUP": "OSG",
         "ITEM_PIPELINES": {
             "fetch_catalog.pipelines.FetchBenchmarkPipeline": 300
         }
