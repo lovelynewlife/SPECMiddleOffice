@@ -68,7 +68,9 @@ class FetchCatalogPipeline:
         counter = 0
 
         for elem in contents:
-            links = etree.HTML(elem[self.link_field]).xpath("//a")
+            # Sometimes, "" make a tag's href empty.
+            link_fields_clean = elem[self.link_field].replace("\"", "")
+            links = etree.HTML(link_fields_clean).xpath("//a")
             for link in links:
                 # add Download prefix
                 field_name = self.DOWNLOAD + link.xpath("./text()")[0].strip()
