@@ -16,30 +16,18 @@ class SPECDirectoryStruct:
         self.benchmarks = []
 
     @staticmethod
-    def launch_exists(data_dir, group="OSG"):
+    def load_exists(data_dir, group="OSG"):
         new_ds = SPECDirectoryStruct(data_dir, group)
         if not os.path.exists(new_ds.data_root_path):
-            logging.error("No struct dir exists")
-            exit(1)
+            raise FileNotFoundError("No struct dir exists")
         benchmarks_path = os.path.join(new_ds.data_root_path, new_ds.__BENCHMARKS)
         if not os.path.isfile(benchmarks_path):
-            logging.error("No benchmarks.txt file exists")
-            exit(1)
+            raise FileNotFoundError("No benchmarks.txt file exists")
         catalog_path = os.path.join(new_ds.data_root_path, new_ds.__CATALOG)
         results_path = os.path.join(new_ds.data_root_path, new_ds.__RESULTS)
         if not os.path.exists(results_path) or not os.path.exists(catalog_path):
-            logging.error("Cannot launch exists, broken init structure.")
-            exit(1)
+            raise FileNotFoundError("Cannot launch exists, broken init structure.")
         new_ds.read_benchmarks(benchmarks_path)
-        results_list = os.listdir(results_path)
-        for elem in results_list:
-            if elem not in new_ds.benchmarks:
-                logging.error("Cannot launch exists, inconsistency.")
-                exit(1)
-        for elem in new_ds.benchmarks:
-            if elem not in results_list:
-                logging.error("Cannot launch exists, inconsistency.")
-                exit(1)
 
         return new_ds
 
@@ -49,8 +37,7 @@ class SPECDirectoryStruct:
             os.mkdir(os.path.join(self.data_root_path, self.__CATALOG))
             os.mkdir(os.path.join(self.data_root_path, self.__RESULTS))
         else:
-            logging.error(f"Init Building in {self.data_root_path} error, already exists.")
-            exit(1)
+            raise FileExistsError(f"Init Building in {self.data_root_path} error, already exists.")
 
     def read_benchmarks(self, benchmarks_path):
         self.benchmarks.clear()
@@ -68,11 +55,14 @@ class SPECDirectoryStruct:
         self.read_benchmarks(benchmarks_path)
         results = os.listdir(results_path)
         if len(results) > 0:
-            logging.error(f"Benchmarks Building in {results_path} error, not empty.")
-            exit(1)
+            raise EnvironmentError(f"Benchmarks Building in {results_path} error, not empty.")
         for elem in self.benchmarks:
             os.mkdir(os.path.join(results_path, elem))
 
+    def __repr__(self):
+        return f"<data_root_path: {self.data_root_path}, benchmarks: {self.benchmarks}>"
+
 
 if __name__ == '__main__':
-    ds = SPECDirectoryStruct.launch_exists("/home/uw1/data")
+    ds = SPECDirectoryStruct("/home/uw2/data")
+    ds.build_init()
