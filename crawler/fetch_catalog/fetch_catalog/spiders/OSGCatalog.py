@@ -20,6 +20,7 @@ class OSGCatalogSpider(scrapy.Spider):
     def parse(self, response):
         data_root_path = self.crawler.settings.get("DATA_ROOT_PATH")
         group = self.crawler.settings.get("GROUP")
+        # TODO: change this spider's target urls reading from settings.
         with open(os.path.join(data_root_path, group, "benchmarks.txt"), "r") as bf:
             benchmarks = bf.readlines()
             for elem in benchmarks:

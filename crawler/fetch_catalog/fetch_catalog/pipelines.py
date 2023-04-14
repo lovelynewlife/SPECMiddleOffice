@@ -6,6 +6,8 @@ import io
 import logging
 import os.path
 import csv
+import re
+
 from lxml import etree
 
 # useful for handling different item types with a single interface
@@ -50,6 +52,7 @@ class FetchCatalogPipeline:
 
     def __init__(self, root_path, group):
         self.path = os.path.join(root_path, group, self.CATALOG)
+        self.matcher = re.compile(r"/(.*)\..*")
 
     @classmethod
     def from_crawler(cls, crawler):
@@ -65,20 +68,23 @@ class FetchCatalogPipeline:
         assert self.link_field in contents.fieldnames
 
         write_rows = []
-        counter = 0
 
         for elem in contents:
             # Sometimes, "" make a tag's href empty.
             link_fields_clean = elem[self.link_field].replace("\"", "")
             links = etree.HTML(link_fields_clean).xpath("//a")
+            id_candidates = []
             for link in links:
                 # add Download prefix
                 field_name = self.DOWNLOAD + link.xpath("./text()")[0].strip()
                 field_names_delta.add(field_name)
-                elem[field_name] = link.xpath("./@href")[0]
+                download_path = link.xpath("./@href")[0]
+                elem[field_name] = download_path
+                id_candidates.extend(self.matcher.findall(download_path))
 
-            elem[self.ID] = counter
-            counter += 1
+            assert len(id_candidates)
+
+            elem[self.ID] = id_candidates[-1].split("/")[-1]
             write_rows.append(elem)
 
         file_path = os.path.join(self.path, f"{title}.csv")
