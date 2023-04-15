@@ -22,7 +22,7 @@ class ScrapyRunner:
 
 def main():
     runner = ScrapyRunner("fetch_catalog")
-    runner.run_one_crawl("OSGBenchmarks", "/home/uw2/data/SPEC/OSG", "BENCHMARKS_FILE_NAME=benchmarks.txt")
+    runner.run_one_crawl("OSGCatalog", "/home/uw2/data/SPEC/OSG", "BENCHMARKS_TO_FETCH=cint95,cfp95", "CATALOG_DIR_NAME=catalog", "RESULTS_DOWNLOAD_MARK=[D]", "CATALOG_ID_FIELD=id")
 
 
 if __name__ == '__main__':
