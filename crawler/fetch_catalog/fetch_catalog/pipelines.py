@@ -86,7 +86,7 @@ class FetchCatalogPipeline:
             assert len(id_candidates)
 
             # extract results identifier.
-            elem[self.id_field] = id_candidates[-1].replcae("/", "_")
+            elem[self.id_field] = id_candidates[-1].replace("/", "_")
             write_rows.append(elem)
 
         file_path = os.path.join(self.path, f"{title}.csv")
