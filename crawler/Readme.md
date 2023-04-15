@@ -1,4 +1,11 @@
 # Crawler for spec.org
+## About
+It's a crawler tool which supports:
+* Crawl benchmarks, benchmark catalogs.
+* Download benchmark results reports.
+* Data Management for the raw data.
+* Python console shell.
+* Notebook Data Exploratory APIs. 
 
 ## Install Requirements
 On ubuntu20.04
