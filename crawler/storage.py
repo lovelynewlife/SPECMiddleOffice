@@ -3,10 +3,6 @@ import os.path
 import shutil
 
 
-def remove_catalog_suffix(file_name):
-    return file_name.rstrip(".csv")
-
-
 class LocalGroupDirectory:
     __CATALOG = "catalog"
     __RESULTS = "results"
@@ -37,6 +33,10 @@ class LocalGroupDirectory:
 
     def get_results_path(self, benchmark):
         return os.path.join(self.results_path, benchmark)
+
+    @staticmethod
+    def remove_catalog_suffix(file_name):
+        return file_name.rstrip(".csv")
 
     @staticmethod
     def try_load_existed(data_dir, group="OSG"):
@@ -97,7 +97,7 @@ class LocalGroupDirectory:
         assert os.path.isdir(self.catalog_path)
         catalogs = os.listdir(self.catalog_path)
         for elem in catalogs:
-            benchmark = remove_catalog_suffix(elem)
+            benchmark = self.remove_catalog_suffix(elem)
             if benchmark not in self.benchmarks:
                 file_removing = self.get_catalog_file_path(benchmark)
                 if not os.path.isfile(file_removing):
@@ -108,7 +108,7 @@ class LocalGroupDirectory:
         assert os.path.isdir(self.catalog_path)
         assert os.path.isdir(self.results_path)
         catalogs = os.listdir(self.catalog_path)
-        catalogs = list(map(remove_catalog_suffix, catalogs))
+        catalogs = list(map(self.remove_catalog_suffix, catalogs))
         results = os.listdir(self.results_path)
 
         for elem in results:
