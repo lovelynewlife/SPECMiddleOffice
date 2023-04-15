@@ -8,7 +8,6 @@ class OSGBenchmarksSpider(scrapy.Spider):
     allowed_domains = ["spec.org"]
     start_urls = ["https://spec.org/cgi-bin/osgresults"]
     custom_settings = {
-        "GROUP": "OSG",
         "ITEM_PIPELINES": {
             "fetch_catalog.pipelines.FetchBenchmarkPipeline": 300
         }

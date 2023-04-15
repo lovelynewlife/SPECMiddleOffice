@@ -1,5 +1,4 @@
 import csv
-import logging
 import os.path
 import shutil
 
@@ -8,7 +7,7 @@ def remove_catalog_suffix(file_name):
     return file_name.rstrip(".csv")
 
 
-class GroupDirectoryStruct:
+class LocalGroupDirectory:
     __CATALOG = "catalog"
     __RESULTS = "results"
     __BENCHMARKS = "benchmarks.txt"
@@ -41,7 +40,7 @@ class GroupDirectoryStruct:
 
     @staticmethod
     def try_load_existed(data_dir, group="OSG"):
-        new_ds = GroupDirectoryStruct(data_dir, group)
+        new_ds = LocalGroupDirectory(data_dir, group)
         if not os.path.exists(new_ds.data_root_path):
             raise FileNotFoundError("No struct dir exists")
         benchmarks_path = new_ds.benchmarks_file_path
@@ -124,6 +123,7 @@ class GroupDirectoryStruct:
 
 
 class DataStorage:
+    __ROOT_NAME = "SPEC"
     __GROUP_MAP_FILE = "group.map"
 
     def __init__(self, data_dir):

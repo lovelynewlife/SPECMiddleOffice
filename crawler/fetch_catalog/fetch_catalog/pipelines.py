@@ -16,15 +16,15 @@ from itemadapter import ItemAdapter
 
 class FetchBenchmarkPipeline:
 
-    def __init__(self, root_path, group):
-        self.path = os.path.join(root_path, group, "benchmarks.txt")
+    def __init__(self, root_path, filename):
+        self.path = os.path.join(root_path, filename)
         self.file = None
 
     @classmethod
     def from_crawler(cls, crawler):
         return cls(
             root_path=crawler.settings.get('DATA_ROOT_PATH'),
-            group=crawler.settings.get('GROUP'),
+            filename=crawler.settings.get('BENCHMARKS_FILE_NAME')
         )
 
     def open_spider(self, spider):
@@ -33,7 +33,7 @@ class FetchBenchmarkPipeline:
             logging.error(f"Unable to open file in \"{self.path}\"")
             exit(1)
 
-    def process_item(self, item, spider):
+    def process_item(self, item: ItemAdapter, spider):
         logging.info(f"writing benchmark: {item}")
         self.file.write(f"{item['name'].strip()}|{item['full_name'].strip()}\n")
         return item
@@ -43,52 +43,54 @@ class FetchBenchmarkPipeline:
 
 
 class FetchCatalogPipeline:
-    link_field = "Disclosure"
-    CATALOG = "catalog"
+    __DOWNLOAD_FIELD = "Disclosure"
 
-    # Download url fields all have the following prefix
-    DOWNLOAD = "[D]"
-    ID = "id"
-
-    def __init__(self, root_path, group):
-        self.path = os.path.join(root_path, group, self.CATALOG)
+    def __init__(self, root_path, dir_name, download_mark, id_field):
+        self.path = os.path.join(root_path, dir_name)
         self.matcher = re.compile(r"/(.*)\..*")
+        # download url fields all have the following prefix
+        self.download_mark = download_mark
+        self.id_field = id_field
 
     @classmethod
     def from_crawler(cls, crawler):
         return cls(
             root_path=crawler.settings.get('DATA_ROOT_PATH'),
-            group=crawler.settings.get('GROUP'),
+            dir_name=crawler.settings.get('CATALOG_DIR_NAME'),
+            download_mark=crawler.settings.get('RESULTS_DOWNLOAD_MARK'),
+            id_field=crawler.settings.get('CATALOG_ID_FIELD'),
         )
 
-    def process_item(self, item, spider):
+    def process_item(self, item: ItemAdapter, spider):
         title = item["title"].strip()
         contents = csv.DictReader(io.StringIO(item["content"]))
         field_names_delta = set()
-        assert self.link_field in contents.fieldnames
+        assert self.__DOWNLOAD_FIELD in contents.fieldnames
 
         write_rows = []
 
         for elem in contents:
-            # Sometimes, "" make a tag's href empty.
-            link_fields_clean = elem[self.link_field].replace("\"", "")
+            # sometimes, "" make a tag's href empty.
+            link_fields_clean = elem[self.__DOWNLOAD_FIELD].replace("\"", "")
             links = etree.HTML(link_fields_clean).xpath("//a")
             id_candidates = []
             for link in links:
                 # add Download prefix
-                field_name = self.DOWNLOAD + link.xpath("./text()")[0].strip()
+                field_name = self.download_mark + link.xpath("./text()")[0].strip()
                 field_names_delta.add(field_name)
                 download_path = link.xpath("./@href")[0]
                 elem[field_name] = download_path
+                # match results identifier from download path.
                 id_candidates.extend(self.matcher.findall(download_path))
 
             assert len(id_candidates)
 
-            elem[self.ID] = id_candidates[-1].split("/")[-1]
+            # extract results identifier.
+            elem[self.id_field] = id_candidates[-1].replcae("/", "_")
             write_rows.append(elem)
 
         file_path = os.path.join(self.path, f"{title}.csv")
-        field_names = [self.ID]
+        field_names = [self.id_field]
         field_names.extend(list(contents.fieldnames))
         field_names.extend(field_names_delta)
 

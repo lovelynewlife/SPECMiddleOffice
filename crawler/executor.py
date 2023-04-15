@@ -1,20 +1,17 @@
 import os
 
+from runner import ScrapyRunner
 from storage import DataStorage
-from download import ResultsDownloader
+from downloader import ResultsDownloader
 
 
 class Executor:
-    __ROOT_NAME = "SPEC"
 
-    def __init__(self, downloader: ResultsDownloader):
-        self.storage = None
-        self.root_dir = None
+    def __init__(self, root_dir: str, storage: DataStorage, downloader: ResultsDownloader, crawler: ScrapyRunner):
+        self.root_dir = root_dir
+        self.storage = storage
         self.downloader = downloader
-
-    @property
-    def data_dir(self):
-        return os.path.join(self.root_dir, self.__ROOT_NAME)
+        self.crawler = crawler
 
     def execute_init_storage(self, root_dir):
         self.root_dir = os.path.abspath(root_dir)
@@ -23,6 +20,5 @@ class Executor:
         elif not os.path.isdir(self.root_dir):
             raise NotADirectoryError(f"Can't open data root directory, {self.root_dir} is not a directory")
         else:
-            if os.path.exists(self.data_dir):
-                # try load storage from exists
-                pass
+            pass
+
