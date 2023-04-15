@@ -3,7 +3,6 @@ import csv
 import logging
 import os.path
 import queue
-import time
 from urllib.parse import urljoin
 
 import requests
@@ -16,17 +15,29 @@ class BoundThreadPoolExecutor(concurrent.futures.ThreadPoolExecutor):
 
 
 class ResultsDownloader:
+    __USER_AGENT = 'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ' \
+                   'Chrome/91.0.4472.114 Safari/537.36'
 
-    def __init__(self):
-        self.executor = BoundThreadPoolExecutor()
+    @staticmethod
+    def do_save(file_id, result_place_dir, file_type):
+        def save(content):
+            res = content.result()
+            if res:
+                save_path = os.path.join(result_place_dir, f"{file_id}.{file_type.lower()}")
+                with open(save_path, "wb") as sf:
+                    sf.write(res)
+                print(f"save {save_path}.")
+            else:
+                logging.error(f"unable to save {file_id}")
+
+        return save
 
     def download_results(self, result_place_dir, id_urls: dict, file_type: str):
         assert os.path.isdir(result_place_dir)
 
         def do_download(file_url):
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
-                              'Chrome/91.0.4472.114 Safari/537.36'
+                'User-Agent': self.__USER_AGENT
             }
             res = requests.get(file_url, headers)
             if res.status_code == requests.codes.ok:
@@ -35,41 +46,27 @@ class ResultsDownloader:
                 logging.warning(f"request url:{file_url} not ok")
                 return None
 
-        def do_save(file_id):
-            def save(content):
-                res = content.result()
-                if res:
-                    save_path = os.path.join(result_place_dir, f"{file_id}.{file_type.lower()}")
-                    with open(save_path, "wb") as sf:
-                        sf.write(res)
-                    print(f"save {save_path}.")
-                else:
-                    logging.error(f"unable to download {id_urls[file_id]}")
+        max_workers = min(len(id_urls.items()), min(32, (os.cpu_count() or 1) + 4))
+        with BoundThreadPoolExecutor(max_workers=max_workers) as executor:
+            tasks = list()
+            max_tasks = 4096
+            for k, v in id_urls.items():
+                task = executor.submit(do_download, v)
+                task.add_done_callback(self.do_save(k, result_place_dir, file_type))
+                tasks.append(task)
+                if len(tasks) >= max_tasks:
+                    # wait for all download tasks done
+                    for task in tasks:
+                        task.result()
+                tasks.clear()
 
-            return save
-
-        tasks = list()
-        max_tasks = 4096
-        for k, v in id_urls.items():
-            task = self.executor.submit(do_download, v)
-            task.add_done_callback(do_save(k))
-            tasks.append(task)
-            if len(tasks) >= max_tasks:
-                # wait for all download tasks done
-                for task in tasks:
-                    task.result()
-            tasks.clear()
-
-        # wait for all download tasks done
-        for task in tasks:
-            task.result()
+            # wait for all download tasks done
+            for task in tasks:
+                task.result()
 
     def download_all_types_results(self, result_place_dir, ft_id_urls):
         for ft, id_urls in ft_id_urls.items():
             self.download_results(result_place_dir, id_urls, ft)
-
-    def __del__(self):
-        self.executor.shutdown(wait=True)
 
 
 def main():
