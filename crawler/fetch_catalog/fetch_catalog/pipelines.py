@@ -44,6 +44,7 @@ class FetchBenchmarkPipeline:
 
 class FetchCatalogPipeline:
     __DOWNLOAD_FIELD = "Disclosure"
+    __INDEX_FIELD = "index"
 
     def __init__(self, root_path, dir_name, download_mark, id_field):
         self.path = os.path.join(root_path, dir_name)
@@ -68,6 +69,7 @@ class FetchCatalogPipeline:
         assert self.__DOWNLOAD_FIELD in contents.fieldnames
 
         write_rows = []
+        counter = 0
 
         for elem in contents:
             # sometimes, "" make a tag's href empty.
@@ -88,9 +90,12 @@ class FetchCatalogPipeline:
             # extract results identifier.
             elem[self.id_field] = id_candidates[-1].replace("/", "_")
             write_rows.append(elem)
+            # add index field
+            elem[self.__INDEX_FIELD] = counter
+            counter += 1
 
         file_path = os.path.join(self.path, f"{title}.csv")
-        field_names = [self.id_field]
+        field_names = [self.__INDEX_FIELD, self.id_field]
         field_names.extend(list(contents.fieldnames))
         field_names.extend(field_names_delta)
 
