@@ -1,4 +1,5 @@
 import concurrent.futures
+import threading
 import csv
 import logging
 import os.path
@@ -27,19 +28,22 @@ class ResultsDownloader:
         self.session = s
 
     @staticmethod
-    def do_save(file_id, result_place_dir, file_type, bar):
+    def do_save(file_id, result_place_dir, file_type, bar_info):
         def save(content):
             res = content.result()
             file_name = f"{file_id}.{file_type.lower()}"
+            bar, bar_lock = bar_info
             if res:
                 save_path = os.path.join(result_place_dir, file_name)
                 with open(save_path, "wb") as sf:
                     sf.write(res)
                 # print(f"save {save_path}.")
                 bar.set_postfix(msg=f"save {file_name}.")
-                bar.update()
             else:
+                bar.set_postfix(msg=f"unable to save {file_name}")
                 logging.error(f"unable to save {file_name}")
+
+            bar.update()
 
         return save
 
@@ -68,13 +72,14 @@ class ResultsDownloader:
                 max_tasks = 4096
                 for k, v in id_urls.items():
                     task = executor.submit(do_download, v)
-                    task.add_done_callback(self.do_save(k, result_place_dir, file_type, bar))
+                    bar_lock = threading.Lock()
+                    task.add_done_callback(self.do_save(k, result_place_dir, file_type, (bar, bar_lock)))
                     tasks.append(task)
                     if len(tasks) >= max_tasks:
                         # wait for all download tasks done
                         for task in tasks:
                             task.result()
-                    tasks.clear()
+                        tasks.clear()
 
                 # wait for all download tasks done
                 for task in tasks:
@@ -86,10 +91,10 @@ class ResultsDownloader:
 
 
 def main():
-    catalog_dir = "/home/uw2/data/SPEC/OSG/catalog"
-    result_dir = "/home/uw2/data/SPEC/OSG/results"
+    catalog_dir = "/home/uw1/data/SPEC/OSG/catalog"
+    result_dir = "/home/uw1/data/SPEC/OSG/results"
     basic_domain = "https://spec.org/"
-    catalogs = ["cint95.csv"]
+    catalogs = ["cpu2017.csv"]
     for elem in catalogs:
         cf = os.path.join(catalog_dir, elem)
         id_urls = dict()
