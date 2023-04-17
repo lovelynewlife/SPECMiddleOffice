@@ -69,8 +69,8 @@ class LocalGroupDirectory:
     def build_init(self):
         if not os.path.exists(self.data_root_path):
             os.makedirs(self.data_root_path)
-            os.mkdir(os.path.join(self.data_root_path, self.__CATALOG))
-            os.mkdir(os.path.join(self.data_root_path, self.__RESULTS))
+            os.mkdir(self.catalog_path)
+            os.mkdir(self.results_path)
         else:
             raise FileExistsError(f"Init Building in {self.data_root_path} error, already exists.")
 
@@ -84,7 +84,16 @@ class LocalGroupDirectory:
                 self.benchmarks.append(b)
 
     def get_supported_file_types(self, benchmark):
-        pass
+        assert os.path.isdir(self.catalog_path)
+        assert os.path.isdir(self.results_path)
+        catalog_file_path = self.get_catalog_file_path(benchmark)
+        with open(catalog_file_path, "r") as cf:
+            csv_file = csv.DictReader(cf)
+            field_names = csv_file.fieldnames
+            file_types = filter(lambda x: str(x).startswith(self.__DOWNLOAD_PREFIX), field_names)
+            file_types = map(lambda x: str(x).lstrip(self.__DOWNLOAD_PREFIX), file_types)
+
+        return list(file_types)
 
     def rebuild_results(self, benchmark):
         catalog_file_path = self.get_catalog_file_path(benchmark)
@@ -134,6 +143,31 @@ class LocalGroupDirectory:
                 removing.append(path_removing)
         for elem in removing:
             shutil.rmtree(elem)
+
+    def verify_results_with_file_type(self, benchmark, file_type):
+        assert os.path.isdir(self.catalog_path)
+        assert os.path.isdir(self.results_path)
+        catalog_file_path = self.get_catalog_file_path(benchmark)
+        result_ids = set()
+        with open(catalog_file_path, "r") as cf:
+            csv_file = csv.DictReader(cf)
+            for row in csv_file:
+                result_ids.add(row[self.__ID])
+
+        rd = self.get_results_file_dir(benchmark, file_type)
+        suffix = f".{str(file_type).lower()}"
+        files_removing = list()
+
+        results_files = os.listdir(rd)
+        for f in results_files:
+            if f.rstrip(suffix) not in result_ids:
+                file_removing = os.path.join(rd, f)
+                if os.path.isfile(file_removing):
+                    files_removing.append(file_removing)
+
+        for elem in files_removing:
+            os.remove(elem)
+        return result_ids
 
     def verify_results_files(self, benchmark):
         assert os.path.isdir(self.catalog_path)
@@ -210,5 +244,8 @@ class DataStorage:
         self.group = None
 
     @staticmethod
-    def try_load_existed(data_dir):
+    def try_load_storage(data_dir):
+        pass
+
+    def load_group(self, group_name):
         pass
