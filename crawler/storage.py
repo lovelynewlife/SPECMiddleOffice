@@ -43,9 +43,9 @@ class LocalGroupDirectory:
     def remove_catalog_suffix(file_name):
         return file_name.rstrip(".csv")
 
-    @staticmethod
-    def try_load_existed(data_dir, group="OSG"):
-        new_ds = LocalGroupDirectory(data_dir, group)
+    @classmethod
+    def try_load_existed(cls, data_dir, group="OSG"):
+        new_ds = cls(data_dir, group)
         if not os.path.exists(new_ds.data_root_path):
             raise FileNotFoundError("No struct dir exists")
         benchmarks_path = new_ds.benchmarks_file_path
@@ -236,16 +236,97 @@ class LocalGroupDirectory:
 
 
 class DataStorage:
-    __ROOT_NAME = "SPEC"
-    __GROUP_MAP_FILE = "group.map"
+    _ROOT_NAME = "SPEC"
+    _GROUP_MAP_FILE = "group.map"
+    _GARBAGE_MARK = ".del"
 
-    def __init__(self, data_dir):
-        self.data_dir = data_dir
-        self.group = None
+    def __init__(self, store_path):
+        self._store_path = store_path
 
-    @staticmethod
-    def try_load_storage(data_dir):
-        pass
+    @classmethod
+    def try_load_storage(cls, store_path):
+        raise NotImplementedError
 
     def load_group(self, group_name):
-        pass
+        raise NotImplementedError
+
+    @property
+    def current_group(self):
+        raise NotImplementedError
+
+    def create_group(self):
+        raise NotImplementedError
+
+    def delete_group(self):
+        raise NotImplementedError
+
+    def dump_garbage(self):
+        raise NotImplementedError
+
+    def rename_group(self):
+        raise NotImplementedError
+
+
+class LocalDataStorage(DataStorage):
+    def __init__(self, store_path):
+        super().__init__(store_path)
+        self.__data_path = os.path.join(os.path.abspath(store_path), super()._ROOT_NAME)
+        self.__group = None
+        self.__metadata = dict()
+
+    @classmethod
+    def try_load_storage(cls, store_path):
+        if not os.path.exists(store_path):
+            raise FileNotFoundError(f"store path: {store_path} not found.")
+        if not os.path.isdir(store_path):
+            raise NotADirectoryError(f"store path: {store_path} is not a dir.")
+
+        ns = LocalDataStorage(store_path)
+        if not os.path.exists(ns.__data_path):
+            raise FileNotFoundError(f"data root path: {ns.__data_path} not found.")
+        if not os.path.isdir(ns.__data_path):
+            raise NotADirectoryError(f"data root path: {ns.__data_path} is not a dir.")
+
+        metadata = os.path.join(ns.__data_path, super()._GROUP_MAP_FILE)
+        if not os.path.isfile(metadata):
+            raise FileNotFoundError(f"metadata file: {metadata} not found.")
+
+        ns.read_metadata()
+
+        return ns
+
+    @property
+    def metadata_file(self):
+        return os.path.join(self.__data_path, super()._GROUP_MAP_FILE)
+
+    def read_metadata(self):
+        self.__metadata.clear()
+        with open(self.metadata_file, "r") as mf:
+            gmap = mf.readlines()
+            for elem in gmap:
+                gname, gtype = elem.strip().split(":")
+                self.__metadata[gname] = gtype
+
+    def write_metadata(self):
+        with open(self.metadata_file, "w") as mf:
+            for gname, gtype in self.__metadata.items():
+                mf.write(f"{gname}:{gtype}\n")
+
+    def load_group(self, group_name):
+        raise NotImplementedError
+
+    @property
+    def current_group(self):
+        return self.__group
+
+    def create_group(self):
+        raise NotImplementedError
+
+    def delete_group(self):
+        raise NotImplementedError
+
+    def dump_garbage(self):
+        raise NotImplementedError
+
+    def rename_group(self):
+        raise NotImplementedError
