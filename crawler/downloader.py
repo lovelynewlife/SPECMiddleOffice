@@ -1,14 +1,13 @@
 import concurrent.futures
-import threading
 import csv
 import logging
 import os.path
 import queue
 from urllib.parse import urljoin
-from tqdm import trange
 
 import requests
 from requests.adapters import HTTPAdapter
+from tqdm import trange
 
 
 class BoundThreadPoolExecutor(concurrent.futures.ThreadPoolExecutor):
@@ -23,16 +22,15 @@ class ResultsDownloader:
 
     def __init__(self):
         s = requests.Session()
-        s.mount('http://', HTTPAdapter(max_retries=5))
-        s.mount('https://', HTTPAdapter(max_retries=5))
+        s.mount('http://', HTTPAdapter(max_retries=3))
+        s.mount('https://', HTTPAdapter(max_retries=3))
         self.session = s
 
     @staticmethod
-    def do_save(file_id, result_place_dir, file_type, bar_info):
+    def do_save(file_id, result_place_dir, file_type, bar):
         def save(content):
             res = content.result()
             file_name = f"{file_id}.{file_type.lower()}"
-            bar, bar_lock = bar_info
             if res:
                 save_path = os.path.join(result_place_dir, file_name)
                 with open(save_path, "wb") as sf:
@@ -63,17 +61,17 @@ class ResultsDownloader:
                     return None
             except requests.exceptions.RequestException:
                 logging.warning(f"request url:{file_url} request exception")
+                return None
 
         task_num = len(id_urls.items())
         max_workers = min(task_num, min(32, (os.cpu_count() or 1) + 4))
-        with BoundThreadPoolExecutor(max_workers=max_workers) as executor:
-            with trange(task_num, desc=f"Downloading {task_num} {file_type} files") as bar:
+        with trange(task_num, desc=f"Downloading {task_num} {file_type} files") as bar:
+            with BoundThreadPoolExecutor(max_workers=max_workers) as executor:
                 tasks = list()
                 max_tasks = 4096
                 for k, v in id_urls.items():
                     task = executor.submit(do_download, v)
-                    bar_lock = threading.Lock()
-                    task.add_done_callback(self.do_save(k, result_place_dir, file_type, (bar, bar_lock)))
+                    task.add_done_callback(self.do_save(k, result_place_dir, file_type, bar))
                     tasks.append(task)
                     if len(tasks) >= max_tasks:
                         # wait for all download tasks done
@@ -84,10 +82,6 @@ class ResultsDownloader:
                 # wait for all download tasks done
                 for task in tasks:
                     task.result()
-
-    def download_all_types_results(self, result_place_dir, ft_id_urls):
-        for ft, id_urls in ft_id_urls.items():
-            self.download_results(result_place_dir, id_urls, ft)
 
 
 def main():
