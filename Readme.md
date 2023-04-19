@@ -1,10 +1,11 @@
 # SPEC Benchmark Data Middle Office
 
 ## About
-It's the Project of the "Data Middle Office" course in 2023 Spring Semester
+It's the Project of the "Data Middle Office" course in 2023 Spring Semester.
 
 ## Structure
 ```text
 root|
-    --crawler: Auto crawler for fetching benchmark data from <https://spec.org/>
+    --crawler: Python module: auto crawler for fetching benchmark data from [SPEC](https://spec.org/).
+    --transform: EDA: explore and deploy pyspark data transform pipeline.
 ```
