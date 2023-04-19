@@ -1,3 +1,4 @@
 crawler/venv/**
 .idea/
 .vscode/
+*.pyc
