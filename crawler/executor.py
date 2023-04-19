@@ -1,16 +1,13 @@
-import os
-
-from runner import ScrapyRunner
-from storage import DataStorage
 from downloader import ResultsDownloader
+from runner import ScrapyRunner
+from storage import BenchmarkGroup
 
 
-class Executor:
+class BenchmarkExecutor:
 
-    def __init__(self, storage: DataStorage, downloader: ResultsDownloader, crawler: ScrapyRunner):
-        self.storage = storage
+    def __init__(self, downloader: ResultsDownloader, crawler: ScrapyRunner):
         self.downloader = downloader
         self.crawler = crawler
 
-    def execute_init_storage(self, root_dir):
+    def execute_xx(self, group: BenchmarkGroup):
         pass

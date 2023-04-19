@@ -3,6 +3,40 @@ import os.path
 import shutil
 
 
+class BenchmarkGroup:
+
+    @classmethod
+    def try_load_existed(cls, data_dir, group="OSG"):
+        raise NotImplementedError
+
+    def build_init(self):
+        raise NotImplementedError
+
+    def read_benchmarks(self):
+        raise NotImplementedError
+
+    def get_supported_file_types(self, benchmark):
+        raise NotImplementedError
+
+    def rebuild_results(self, benchmark):
+        raise NotImplementedError
+
+    def verify_catalogs(self):
+        raise NotImplementedError
+
+    def verify_results(self):
+        raise NotImplementedError
+
+    def verify_results_with_file_type(self, benchmark, file_type):
+        raise NotImplementedError
+
+    def verify_results_files(self, benchmark):
+        raise NotImplementedError
+
+    def check_lost_results_files(self, benchmark, file_type):
+        raise NotImplementedError
+
+
 class LocalGroupDirectory:
     __CATALOG = "catalog"
     __RESULTS = "results"
@@ -236,9 +270,6 @@ class LocalGroupDirectory:
 
 
 class DataStorage:
-    _ROOT_NAME = "SPEC"
-    _GROUP_MAP_FILE = "group.map"
-    _GARBAGE_MARK = ".del"
 
     def __init__(self, store_path):
         self._store_path = store_path
@@ -268,9 +299,13 @@ class DataStorage:
 
 
 class LocalDataStorage(DataStorage):
+    _ROOT_NAME = "SPEC"
+    _GROUP_MAP_FILE = "group.map"
+    _GARBAGE_MARK = ".del"
+
     def __init__(self, store_path):
         super().__init__(store_path)
-        self.__data_path = os.path.join(os.path.abspath(store_path), super()._ROOT_NAME)
+        self.__data_path = os.path.join(os.path.abspath(store_path), self._ROOT_NAME)
         self.__group = None
         self.__metadata = dict()
 
@@ -287,7 +322,7 @@ class LocalDataStorage(DataStorage):
         if not os.path.isdir(ns.__data_path):
             raise NotADirectoryError(f"data root path: {ns.__data_path} is not a dir.")
 
-        metadata = os.path.join(ns.__data_path, super()._GROUP_MAP_FILE)
+        metadata = os.path.join(ns.__data_path, cls._GROUP_MAP_FILE)
         if not os.path.isfile(metadata):
             raise FileNotFoundError(f"metadata file: {metadata} not found.")
 
@@ -297,7 +332,7 @@ class LocalDataStorage(DataStorage):
 
     @property
     def metadata_file(self):
-        return os.path.join(self.__data_path, super()._GROUP_MAP_FILE)
+        return os.path.join(self.__data_path, self._GROUP_MAP_FILE)
 
     def read_metadata(self):
         self.__metadata.clear()
@@ -313,11 +348,14 @@ class LocalDataStorage(DataStorage):
                 mf.write(f"{gname}:{gtype}\n")
 
     def load_group(self, group_name):
-        raise NotImplementedError
+        return self.current_group
 
     @property
     def current_group(self):
-        return self.__group
+        if self.__group:
+            return self.__group
+        else:
+            return None
 
     def create_group(self):
         raise NotImplementedError

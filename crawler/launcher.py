@@ -21,7 +21,11 @@ class Launcher(Singleton):
     def op(self, value):
         raise PermissionError("Unsupported operation.")
 
-    def set_op(self):
+    def open(self, data_path):
+        print(data_path)
+        # init Storage
+
+        # launch Operations
         self.__OP = dict()
 
 
