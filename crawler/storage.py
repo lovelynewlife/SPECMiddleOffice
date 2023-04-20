@@ -3,10 +3,40 @@ import os.path
 import shutil
 
 
-class BenchmarkGroup:
+class GroupType:
+    OSG = 1  # Open System Group
+    HPC = 2  # High Performance Group
+    ISG = 3  # International Standards Group
+    GWP = 4  # Graphics and Workstation Performance Group
+    RG = 5  # Research Group
+
+
+GroupTypeMaps = {
+    GroupType.OSG: "OSG: Open System Group",
+    GroupType.HPC: "HPC: High Performance Group",
+    GroupType.ISG: "ISG: International Standards Group",
+    GroupType.GWP: "GWP: Graphics and Workstation Performance Group",
+    GroupType.RG: "RG: Research Group"
+}
+# BenchmarkGroups = [GroupType.OSG, GroupType.HPC, GroupType.ISG, GroupType.GWP]
+BenchmarkGroups = [GroupType.OSG]
+
+
+class Group:
+
+    @property
+    def group_type(self):
+        raise NotImplementedError
+
+    @property
+    def group_name(self):
+        raise NotImplementedError
+
+
+class BenchmarkGroup(Group):
 
     @classmethod
-    def try_load_existed(cls, data_dir, group="OSG"):
+    def try_load_existed(cls, data_dir, group_name, group_type):
         raise NotImplementedError
 
     def build_init(self):
@@ -37,7 +67,7 @@ class BenchmarkGroup:
         raise NotImplementedError
 
 
-class LocalGroupDirectory:
+class LocalBenchmarkGroup:
     __CATALOG = "catalog"
     __RESULTS = "results"
     __BENCHMARKS = "benchmarks.txt"
@@ -45,24 +75,33 @@ class LocalGroupDirectory:
     __ID = "id"
     __INDEX = "index"
 
-    def __init__(self, data_dir, group="OSG"):
+    def __init__(self, data_dir, group_name, group_type=GroupType.OSG):
         assert os.path.exists(os.path.exists(data_dir))
         data_dir = os.path.abspath(data_dir)
-        self.group = group
-        self.data_root_path = os.path.join(data_dir, group)
-        self.benchmarks = []
+        self.__group_name = group_name
+        self.__group_type = group_type
+        self.__data_root_path = os.path.join(data_dir, group_name)
+        self.__benchmarks = []
+
+    @property
+    def group_type(self):
+        return self.__group_type
+
+    @property
+    def group_name(self):
+        return self.__group_name
 
     @property
     def results_path(self):
-        return os.path.join(self.data_root_path, self.__RESULTS)
+        return os.path.join(self.__data_root_path, self.__RESULTS)
 
     @property
     def catalog_path(self):
-        return os.path.join(self.data_root_path, self.__CATALOG)
+        return os.path.join(self.__data_root_path, self.__CATALOG)
 
     @property
     def benchmarks_file_path(self):
-        return os.path.join(self.data_root_path, self.__BENCHMARKS)
+        return os.path.join(self.__data_root_path, self.__BENCHMARKS)
 
     def get_catalog_file_path(self, benchmark):
         return os.path.join(self.catalog_path, f"{benchmark}.csv")
@@ -75,12 +114,13 @@ class LocalGroupDirectory:
 
     @staticmethod
     def remove_catalog_suffix(file_name):
-        return file_name.rstrip(".csv")
+        if file_name.endswith(".csv"):
+            return file_name[:-len(".csv")]
 
     @classmethod
-    def try_load_existed(cls, data_dir, group="OSG"):
-        new_ds = cls(data_dir, group)
-        if not os.path.exists(new_ds.data_root_path):
+    def try_load_existed(cls, data_dir, group_name, group_type):
+        new_ds = cls(data_dir, group_name, group_type)
+        if not os.path.exists(new_ds.__data_root_path):
             raise FileNotFoundError("No struct dir exists")
         benchmarks_path = new_ds.benchmarks_file_path
         if not os.path.isfile(benchmarks_path):
@@ -101,21 +141,23 @@ class LocalGroupDirectory:
         return new_ds
 
     def build_init(self):
-        if not os.path.exists(self.data_root_path):
-            os.makedirs(self.data_root_path)
+        if not os.path.exists(self.__data_root_path):
+            os.makedirs(self.__data_root_path)
+            bf = open(self.benchmarks_file_path, "w")
+            bf.close()
             os.mkdir(self.catalog_path)
             os.mkdir(self.results_path)
         else:
-            raise FileExistsError(f"Init Building in {self.data_root_path} error, already exists.")
+            raise FileExistsError(f"Init Building in {self.__data_root_path} error, already exists.")
 
     def read_benchmarks(self):
         assert os.path.isfile(self.benchmarks_file_path)
-        self.benchmarks.clear()
+        self.__benchmarks.clear()
         with open(self.benchmarks_file_path, "r") as bf:
             rows = bf.readlines()
             for row in rows:
                 b = row.strip().split("|")[0]
-                self.benchmarks.append(b)
+                self.__benchmarks.append(b)
 
     def get_supported_file_types(self, benchmark):
         assert os.path.isdir(self.catalog_path)
@@ -152,7 +194,7 @@ class LocalGroupDirectory:
         files_removing = list()
         for elem in catalogs:
             benchmark = self.remove_catalog_suffix(elem)
-            if benchmark not in self.benchmarks:
+            if benchmark not in self.__benchmarks:
                 file_removing = self.get_catalog_file_path(benchmark)
                 if not os.path.isfile(file_removing):
                     raise FileNotFoundError(f"{file_removing} is not a file.")
@@ -266,7 +308,7 @@ class LocalGroupDirectory:
         return lost_files
 
     def __repr__(self):
-        return f"<data_root_path: {self.data_root_path}, benchmarks: {self.benchmarks}>"
+        return f"<data_root_path: {self.__data_root_path}, benchmarks: {self.__benchmarks}>"
 
 
 class DataStorage:
@@ -275,26 +317,29 @@ class DataStorage:
         self._store_path = store_path
 
     @classmethod
-    def try_load_storage(cls, store_path):
+    def open_storage(cls, store_path):
         raise NotImplementedError
 
     def load_group(self, group_name):
+        raise NotImplementedError
+
+    def get_groups(self):
         raise NotImplementedError
 
     @property
     def current_group(self):
         raise NotImplementedError
 
-    def create_group(self):
+    def create_group(self, group_name, group_type):
         raise NotImplementedError
 
-    def delete_group(self):
+    def delete_group(self, group_name):
         raise NotImplementedError
 
     def dump_garbage(self):
         raise NotImplementedError
 
-    def rename_group(self):
+    def rename_group(self, group_name, new_name):
         raise NotImplementedError
 
 
@@ -310,25 +355,30 @@ class LocalDataStorage(DataStorage):
         self.__metadata = dict()
 
     @classmethod
-    def try_load_storage(cls, store_path):
+    def open_storage(cls, store_path):
         if not os.path.exists(store_path):
-            raise FileNotFoundError(f"store path: {store_path} not found.")
+            raise RuntimeError(f"store path: {store_path} not found.")
         if not os.path.isdir(store_path):
-            raise NotADirectoryError(f"store path: {store_path} is not a dir.")
-
-        ns = LocalDataStorage(store_path)
-        if not os.path.exists(ns.__data_path):
-            raise FileNotFoundError(f"data root path: {ns.__data_path} not found.")
-        if not os.path.isdir(ns.__data_path):
-            raise NotADirectoryError(f"data root path: {ns.__data_path} is not a dir.")
-
-        metadata = os.path.join(ns.__data_path, cls._GROUP_MAP_FILE)
-        if not os.path.isfile(metadata):
-            raise FileNotFoundError(f"metadata file: {metadata} not found.")
-
-        ns.read_metadata()
-
+            raise RuntimeError(f"store path: {store_path} is not a dir.")
+        ns = cls(store_path)
+        ns.try_load_storage()
         return ns
+
+    def try_load_storage(self):
+        if not os.path.exists(self.__data_path):
+            raise RuntimeError(f"data root path: {self.__data_path} not found.")
+        if not os.path.isdir(self.__data_path):
+            raise RuntimeError(f"data root path: {self.__data_path} is not a dir.")
+
+        metadata = os.path.join(self.__data_path, self._GROUP_MAP_FILE)
+        if os.path.exists(metadata):
+            if not os.path.isfile(metadata):
+                raise RuntimeError(f"metadata file: {metadata} not found.")
+        else:
+            mf = open(self.metadata_file, "w")
+            mf.close()
+
+        self.read_metadata()
 
     @property
     def metadata_file(self):
@@ -340,15 +390,38 @@ class LocalDataStorage(DataStorage):
             gmap = mf.readlines()
             for elem in gmap:
                 gname, gtype = elem.strip().split(":")
-                self.__metadata[gname] = gtype
+                self.__metadata[gname] = int(gtype)
 
     def write_metadata(self):
         with open(self.metadata_file, "w") as mf:
             for gname, gtype in self.__metadata.items():
                 mf.write(f"{gname}:{gtype}\n")
 
+    # In storage, this method itself is a factory method.
     def load_group(self, group_name):
+        load_group_type = None
+        for gname, gtype in self.__metadata.items():
+            if gname == group_name:
+                load_group_type = gtype
+        if load_group_type is None:
+            raise RuntimeError(f"{group_name} not found.")
+        else:
+            if load_group_type in BenchmarkGroups:
+                try:
+                    self.__group = LocalBenchmarkGroup.try_load_existed(self.__data_path, group_name, load_group_type)
+                except FileNotFoundError as fn:
+                    raise RuntimeError(fn)
+                except NotADirectoryError as nd:
+                    raise RuntimeError(nd)
+            else:
+                raise RuntimeError(f"Broken: not supported group type {GroupTypeMaps[load_group_type]}.")
         return self.current_group
+
+    def get_groups(self):
+        group_info = dict()
+        for gname, gtype in self.__metadata.items():
+            group_info[gname] = GroupTypeMaps[gtype]
+        return group_info
 
     @property
     def current_group(self):
@@ -357,14 +430,72 @@ class LocalDataStorage(DataStorage):
         else:
             return None
 
-    def create_group(self):
-        raise NotImplementedError
+    def create_group(self, group_name, group_type):
+        for gname, gtype in self.__metadata.items():
+            if gname == group_name:
+                raise RuntimeError(f"{group_name} already existed.")
+        if group_type in BenchmarkGroups:
+            g = LocalBenchmarkGroup(self.__data_path, group_name, group_type)
+            try:
+                g.build_init()
+            except FileExistsError as fe:
+                raise RuntimeError(fe)
 
-    def delete_group(self):
-        raise NotImplementedError
+        else:
+            raise RuntimeError(f"Unsupported group type: {GroupTypeMaps[group_type]}.")
+        self.__metadata[group_name] = group_type
+        self.write_metadata()
+
+    def delete_group(self, group_name):
+        del_group = None
+        for gname, gtype in self.__metadata.items():
+            if gname == group_name:
+                del_group = group_name
+                break
+        if del_group is None:
+            raise RuntimeError(f"{group_name} not found.")
+        if self.current_group and self.current_group.group_name == group_name:
+            self.__group = None
+        group_path = os.path.join(self.__data_path, del_group)
+        new_group_path = os.path.join(self.__data_path, f"{del_group}{self._GARBAGE_MARK}")
+        self.__metadata.pop(del_group)
+        self.write_metadata()
+        os.rename(group_path, new_group_path)
 
     def dump_garbage(self):
-        raise NotImplementedError
+        dirs_deleted = []
+        candidates = os.listdir(self.__data_path)
+        for elem in candidates:
+            if elem.endswith(self._GARBAGE_MARK):
+                cpath = os.path.join(self.__data_path, elem)
+                if os.path.isdir(cpath):
+                    dirs_deleted.append(cpath)
+        for elem in dirs_deleted:
+            shutil.rmtree(elem)
 
-    def rename_group(self):
-        raise NotImplementedError
+    def rename_group(self, group_name, new_name):
+        re_group = None
+        re_group_type = None
+        for gname, gtype in self.__metadata.items():
+            if gname == group_name:
+                re_group = group_name
+                re_group_type = gtype
+                break
+        if re_group is None:
+            raise RuntimeError(f"{group_name} not found.")
+
+        for gname, gtype in self.__metadata.items():
+            if gname == new_name:
+                raise RuntimeError(f"{new_name} already existed.")
+        group_path = os.path.join(self.__data_path, re_group)
+        assert os.path.isdir(group_path)
+        new_group_path = os.path.join(self.__data_path, new_name)
+        if os.path.exists(new_group_path):
+            raise RuntimeError(f"storage in {new_group_path} already existed.")
+
+        self.__metadata[new_name] = re_group_type
+        self.__metadata.pop(re_group)
+        self.write_metadata()
+        if self.current_group:
+            self.current_group.group_name = new_name
+        os.rename(group_path, new_group_path)

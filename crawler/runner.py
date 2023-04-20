@@ -14,9 +14,7 @@ class ScrapyRunner:
 
     def run_one_crawl(self, spider_name, result_path, *args):
         remain_args = ' '.join([f"-s {arg}" for arg in args])
-        print(remain_args)
         cmds = f"scrapy crawl {spider_name} -s DATA_ROOT_PATH={result_path} {remain_args}"
-        print(cmds)
         subprocess.run(cmds.split(), cwd=self.working_dir, stderr=subprocess.STDOUT)
 
 

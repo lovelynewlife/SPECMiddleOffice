@@ -1,5 +1,5 @@
 from executor import BenchmarkExecutor
-from storage import DataStorage, BenchmarkGroup
+from storage import DataStorage, BenchmarkGroup, GroupType, BenchmarkGroups
 
 
 class OperationsHelper:
@@ -66,15 +66,34 @@ class Operations:
         raise PermissionError("Unsupported operation.")
 
     def use_group(self, group_name):
-        self.__op_helper.group = self.__storage.load_group("OSG")
-        self.__group_op = BenchmarkGroupOperationWrapper(self.__op_helper, BenchmarkGroupOperation(self.__op_helper))
-        pass
+        try:
+            loaded = self.__storage.load_group(group_name)
+            self.__op_helper.group = loaded
+        except RuntimeError as err:
+            print(err)
+            return
 
-    def drop_group(self):
-        pass
+        # May need a factory class to build executor.
+        if self.__op_helper.group.group_type in BenchmarkGroups:
+            self.__op_helper.executor = BenchmarkExecutor()
+            self.__group_op = BenchmarkGroupOperationWrapper(self.__op_helper,
+                                                             BenchmarkGroupOperation(self.__op_helper))
+            print(f"Load group {group_name} ok.")
+        else:
+            # on purpose, for debugging.
+            raise RuntimeError("Group type is not supported.")
 
-    def rename_group(self):
-        pass
+    def drop_group(self, group_name):
+        try:
+            self.__storage.delete_group(group_name)
+        except RuntimeError as err:
+            print(err)
+
+    def rename_group(self, group_name, new_name):
+        try:
+            self.__storage.rename_group(group_name, new_name)
+        except RuntimeError as err:
+            print(err)
 
     def show_group(self, group_name):
         pass
@@ -82,7 +101,7 @@ class Operations:
     def list_groups(self):
         pass
 
-    def create_group(self, group_name, group_type):
+    def create_group(self, group_name, group_type: GroupType):
         pass
 
     @staticmethod

@@ -5,9 +5,9 @@ from storage import BenchmarkGroup
 
 class BenchmarkExecutor:
 
-    def __init__(self, downloader: ResultsDownloader, crawler: ScrapyRunner):
-        self.downloader = downloader
-        self.crawler = crawler
+    def __init__(self, *args):
+        self.downloader = ResultsDownloader()
+        self.crawler = ScrapyRunner("fetch_catalog")
 
     def execute_xx(self, group: BenchmarkGroup):
         pass
