@@ -1,5 +1,5 @@
 from executor import BenchmarkExecutor
-from storage import DataStorage, BenchmarkGroup, GroupType, BenchmarkGroups
+from storage import DataStorage, BenchmarkGroup, BenchmarkGroups
 
 
 class OperationsHelper:
@@ -80,29 +80,47 @@ class Operations:
                                                              BenchmarkGroupOperation(self.__op_helper))
             print(f"Load group {group_name} ok.")
         else:
-            # on purpose, for debugging.
+            # on purpose, for debugging. 
             raise RuntimeError("Group type is not supported.")
 
     def drop_group(self, group_name):
         try:
             self.__storage.delete_group(group_name)
+            print(f"Drop {group_name} ok.")
         except RuntimeError as err:
             print(err)
 
     def rename_group(self, group_name, new_name):
         try:
             self.__storage.rename_group(group_name, new_name)
+            print(f"Rename {group_name} ok.")
         except RuntimeError as err:
             print(err)
 
     def show_group(self, group_name):
-        pass
+        group_info = self.__storage.get_groups()
+        if group_info.has_key(group_name):
+            print(f"{group_name}: {group_info[group_name]}")
+        else:
+            print(f"{group_name} not exists.")
 
     def list_groups(self):
-        pass
+        group_info = self.__storage.get_groups()
+        for k, v in group_info.items():
+            print(f"{k}: {v}")
 
-    def create_group(self, group_name, group_type: GroupType):
-        pass
+    def create_group(self, group_name, group_type):
+        try:
+            self.__storage.create_group(group_name, group_type)
+            print(f"Create {group_name} ok.")
+        except RuntimeError as err:
+            print(err)
+
+    def dump_garbage(self, confirm=False):
+        if not confirm:
+            print("Delete permenantly need set confirm to True.")
+            return
+        self.__storage.dump_garbage()
 
     @staticmethod
     def help():

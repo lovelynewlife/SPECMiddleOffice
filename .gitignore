@@ -2,3 +2,4 @@ crawler/venv/**
 .idea/
 .vscode/
 *.pyc
+.DS_Store
