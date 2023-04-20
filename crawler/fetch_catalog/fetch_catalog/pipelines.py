@@ -18,6 +18,7 @@ class FetchBenchmarkPipeline:
 
     def __init__(self, root_path, filename):
         self.path = os.path.join(root_path, filename)
+        self.temp_name = os.path.join(root_path, f"{filename}.tmp")
         self.file = None
 
     @classmethod
@@ -28,7 +29,7 @@ class FetchBenchmarkPipeline:
         )
 
     def open_spider(self, spider):
-        self.file = open(self.path, "w")
+        self.file = open(self.temp_name, "w")
         if not self.file:
             logging.error(f"Unable to open file in \"{self.path}\"")
             exit(1)
@@ -40,14 +41,17 @@ class FetchBenchmarkPipeline:
 
     def close_spider(self, spider):
         self.file.close()
+        if os.path.exists(self.path):
+            os.remove(self.path)
+        os.rename(self.temp_name, self.path)
 
 
 class FetchCatalogPipeline:
     __DOWNLOAD_FIELD = "Disclosure"
     __INDEX_FIELD = "index"
 
-    def __init__(self, root_path, dir_name, download_mark, id_field):
-        self.path = os.path.join(root_path, dir_name)
+    def __init__(self, catalog_path, download_mark, id_field):
+        self.path = os.path.abspath(catalog_path)
         self.matcher = re.compile(r"/(.*)\..*")
         # download url fields all have the following prefix
         self.download_mark = download_mark
@@ -56,8 +60,7 @@ class FetchCatalogPipeline:
     @classmethod
     def from_crawler(cls, crawler):
         return cls(
-            root_path=crawler.settings.get('DATA_ROOT_PATH'),
-            dir_name=crawler.settings.get('CATALOG_DIR_NAME'),
+            catalog_path=crawler.settings.get('DATA_ROOT_PATH'),
             download_mark=crawler.settings.get('RESULTS_DOWNLOAD_MARK'),
             id_field=crawler.settings.get('CATALOG_ID_FIELD'),
         )
@@ -99,9 +102,13 @@ class FetchCatalogPipeline:
         field_names.extend(list(contents.fieldnames))
         field_names.extend(field_names_delta)
 
-        with open(file_path, "w") as csvfile:
+        temp_file = f"{file_path}.tmp"
+        with open(temp_file, "w") as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=field_names)
             writer.writeheader()
             for row in write_rows:
                 writer.writerow(row)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        os.rename(temp_file, file_path)
         logging.info(f"write {title} catalog to {file_path}")

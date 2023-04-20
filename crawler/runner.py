@@ -20,7 +20,8 @@ class ScrapyRunner:
 
 def main():
     runner = ScrapyRunner("fetch_catalog")
-    runner.run_one_crawl("OSGCatalog", "/home/uw1/data/SPEC/OSG", "BENCHMARKS_TO_FETCH=cfp95", "CATALOG_DIR_NAME=catalog", "RESULTS_DOWNLOAD_MARK=[D]", "CATALOG_ID_FIELD=id")
+    runner.run_one_crawl("OSGCatalog", "/home/uw1/data/SPEC/OSG/catalog", "BENCHMARKS_TO_FETCH=cfp95",
+                         "RESULTS_DOWNLOAD_MARK=[D]", "CATALOG_ID_FIELD=id")
     print("Crawler done.")
 
 

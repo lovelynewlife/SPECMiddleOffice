@@ -42,6 +42,33 @@ class BenchmarkGroup(Group):
     def build_init(self):
         raise NotImplementedError
 
+    @property
+    def results_path(self):
+        raise NotImplementedError
+
+    @property
+    def catalog_path(self):
+        raise NotImplementedError
+
+    @property
+    def data_root_path(self):
+        raise NotImplementedError
+
+    @property
+    def benchmarks_filename(self):
+        raise NotImplementedError
+
+    @property
+    def results_download_mark(self):
+        raise NotImplementedError
+
+    @property
+    def results_id_field(self):
+        raise NotImplementedError
+
+    def get_catalog_file_path(self, benchmark):
+        raise NotImplementedError
+
     def read_benchmarks(self):
         raise NotImplementedError
 
@@ -107,6 +134,22 @@ class LocalBenchmarkGroup:
     @property
     def catalog_path(self):
         return os.path.join(self.__data_root_path, self.__CATALOG)
+
+    @property
+    def data_root_path(self):
+        return self.__data_root_path
+
+    @property
+    def benchmarks_filename(self):
+        return self.__BENCHMARKS
+
+    @property
+    def results_download_mark(self):
+        return self.__DOWNLOAD_PREFIX
+
+    @property
+    def results_id_field(self):
+        return self.__ID
 
     @property
     def benchmarks_file_path(self):
@@ -176,7 +219,7 @@ class LocalBenchmarkGroup:
             csv_file = csv.DictReader(cf)
             field_names = csv_file.fieldnames
             file_types = filter(lambda x: str(x).startswith(self.__DOWNLOAD_PREFIX), field_names)
-            file_types = map(lambda x: str(x)[len(self.__DOWNLOAD_PREFIX):],, file_types)
+            file_types = map(lambda x: str(x)[len(self.__DOWNLOAD_PREFIX):], file_types)
 
         return list(file_types)
 
@@ -184,7 +227,9 @@ class LocalBenchmarkGroup:
         return self.__benchmarks
 
     def get_catalog_location(self, benchmark):
-        return self.get_catalog_file_path(benchmark)
+        catalog_location = self.get_catalog_file_path(benchmark)
+        if os.path.exists(catalog_location):
+            return catalog_location
 
     def get_results_location(self, benchmark, indices, file_type):
         catalog_file_path = self.get_catalog_file_path(benchmark)
@@ -206,7 +251,7 @@ class LocalBenchmarkGroup:
                 rurl = elem[download_field]
                 if rindex in find_indices:
                     filename = f"{rid}{suffix}"
-                    full_path = os.path.join(self.get_results_file_dir(benchmark, file_type), file_name)
+                    full_path = os.path.join(self.get_results_file_dir(benchmark, file_type), filename)
                     res.append((rindex, f"{full_path}", rurl))
 
         return res
@@ -306,8 +351,6 @@ class LocalBenchmarkGroup:
                     raise NotADirectoryError(f"{rd} is not a dir.")
             else:
                 dirs_creating.append(rd)
-        for elem in dirs_creating:
-            os.mkdir(elem)
 
         files_removing = list()
         for suffix, rd in results_files_dirs:
@@ -318,6 +361,9 @@ class LocalBenchmarkGroup:
                     if os.path.isfile(file_removing):
                         files_removing.append(file_removing)
 
+        for elem in dirs_creating:
+            os.mkdir(elem)
+
         for elem in files_removing:
             os.remove(elem)
 
@@ -325,6 +371,7 @@ class LocalBenchmarkGroup:
         lost_files = []
         results_files_dir = self.get_results_file_dir(benchmark, file_type)
         catalog_file_path = self.get_catalog_file_path(benchmark)
+        suffix = f".{file_type.lower()}"
         assert os.path.isdir(results_files_dir)
 
         results_files = set(os.listdir(results_files_dir))
@@ -336,10 +383,12 @@ class LocalBenchmarkGroup:
             file_types = map(lambda x: str(x)[len(self.__DOWNLOAD_PREFIX):], file_types)
             if str(file_type).upper() not in file_types:
                 raise FileNotFoundError("No such file type supported.")
+            download_field = f"{self.__DOWNLOAD_PREFIX}{str(file_type).upper()}"
             for row in csv_file:
-                results.add((int(row[self.__INDEX]), row[self.__ID], row[f"{self.__DOWNLOAD_PREFIX}{str(file_type).upper()}"]))
+                results.add((int(row[self.__INDEX]), row[self.__ID], row[download_field]))
 
         for index, rid, rurl in results:
+            file_lost = f"{rid}{suffix}"
             if file_lost not in results_files:
                 lost_files.append((index, rid, rurl))
 

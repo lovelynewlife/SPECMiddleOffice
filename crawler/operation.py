@@ -38,7 +38,23 @@ class BenchmarkGroupOperation:
         return self.__helper.executor
 
     def fetch_benchmarks(self):
-        pass
+        try:
+            res = self.executor.execute_fetch_benchmarks(self.group)
+            print(f"{len(res)} Benchmarks available.")
+        except RuntimeError as err:
+            print(err)
+
+    def fetch_catalog(self, benchmark):
+        self.fetch_catalogs([benchmark])
+
+    def fetch_catalogs(self, benchmarks):
+        try:
+            res = self.executor.execute_fetch_catalogs(self.group, benchmarks)
+            print("Fetching Status:")
+            for b, location in res:
+                print(f"{b}: {location}")
+        except RuntimeError as err:
+            print(err)
 
 
 class BenchmarkGroupOperationWrapper:
