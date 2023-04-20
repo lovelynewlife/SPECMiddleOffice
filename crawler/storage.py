@@ -2,24 +2,7 @@ import csv
 import os.path
 import shutil
 
-
-class GroupType:
-    OSG = 1  # Open System Group
-    HPC = 2  # High Performance Group
-    ISG = 3  # International Standards Group
-    GWP = 4  # Graphics and Workstation Performance Group
-    RG = 5  # Research Group
-
-
-GroupTypeMaps = {
-    GroupType.OSG: "OSG: Open System Group",
-    GroupType.HPC: "HPC: High Performance Group",
-    GroupType.ISG: "ISG: International Standards Group",
-    GroupType.GWP: "GWP: Graphics and Workstation Performance Group",
-    GroupType.RG: "RG: Research Group"
-}
-# BenchmarkGroups = [GroupType.OSG, GroupType.HPC, GroupType.ISG, GroupType.GWP]
-BenchmarkGroups = [GroupType.OSG]
+from defines import BenchmarkGroups, GroupTypeMaps, GroupType
 
 
 class Group:
@@ -69,6 +52,12 @@ class BenchmarkGroup(Group):
     def get_catalog_file_path(self, benchmark):
         raise NotImplementedError
 
+    def get_results_path(self, benchmark):
+        raise NotImplementedError
+
+    def get_results_file_dir(self, benchmark, filetype):
+        raise NotImplementedError
+
     def read_benchmarks(self):
         raise NotImplementedError
 
@@ -82,6 +71,9 @@ class BenchmarkGroup(Group):
         raise NotImplementedError
 
     def get_results_location(self, benchmark, indices, file_type):
+        raise NotImplementedError
+
+    def get_all_results_location(self, benchmark, file_type):
         raise NotImplementedError
 
     def rebuild_results(self, benchmark):
@@ -103,7 +95,7 @@ class BenchmarkGroup(Group):
         raise NotImplementedError
 
 
-class LocalBenchmarkGroup:
+class LocalBenchmarkGroup(BenchmarkGroup):
     __CATALOG = "catalog"
     __RESULTS = "results"
     __BENCHMARKS = "benchmarks.txt"
@@ -231,7 +223,7 @@ class LocalBenchmarkGroup:
         if os.path.exists(catalog_location):
             return catalog_location
 
-    def get_results_location(self, benchmark, indices, file_type):
+    def get_results_location(self, benchmark, file_type, indices):
         catalog_file_path = self.get_catalog_file_path(benchmark)
         res = []
         find_indices = set([str(elem) for elem in indices])
@@ -253,6 +245,25 @@ class LocalBenchmarkGroup:
                     filename = f"{rid}{suffix}"
                     full_path = os.path.join(self.get_results_file_dir(benchmark, file_type), filename)
                     res.append((rindex, f"{full_path}", rurl))
+
+        return res
+
+    def get_all_results_location(self, benchmark, file_type):
+        catalog_file_path = self.get_catalog_file_path(benchmark)
+        res = []
+
+        with open(catalog_file_path, "r") as cf:
+            csv_file = csv.DictReader(cf)
+            field_names = csv_file.fieldnames
+            file_types = filter(lambda x: str(x).startswith(self.__DOWNLOAD_PREFIX), field_names)
+            file_types = map(lambda x: str(x)[len(self.__DOWNLOAD_PREFIX):], file_types)
+            if str(file_type).upper() not in file_types:
+                raise FileNotFoundError("No such file type supported.")
+            download_field = f"{self.__DOWNLOAD_PREFIX}{str(file_type).upper()}"
+            for elem in csv_file:
+                rid = elem[self.__ID]
+                rurl = elem[download_field]
+                res.append((rid, rurl))
 
         return res
 
@@ -352,6 +363,9 @@ class LocalBenchmarkGroup:
             else:
                 dirs_creating.append(rd)
 
+        for elem in dirs_creating:
+            os.makedirs(elem)
+
         files_removing = list()
         for suffix, rd in results_files_dirs:
             results_files = os.listdir(rd)
@@ -360,9 +374,6 @@ class LocalBenchmarkGroup:
                     file_removing = os.path.join(rd, f)
                     if os.path.isfile(file_removing):
                         files_removing.append(file_removing)
-
-        for elem in dirs_creating:
-            os.mkdir(elem)
 
         for elem in files_removing:
             os.remove(elem)
@@ -453,7 +464,7 @@ class LocalDataStorage(DataStorage):
 
     def try_load_storage(self):
         if not os.path.exists(self.__data_path):
-            raise RuntimeError(f"data root path: {self.__data_path} not found.")
+            os.mkdir(self.__data_path)
         if not os.path.isdir(self.__data_path):
             raise RuntimeError(f"data root path: {self.__data_path} is not a dir.")
 
@@ -547,7 +558,7 @@ class LocalDataStorage(DataStorage):
         new_group_path = os.path.join(self.__data_path, f"{del_group}{self._GARBAGE_MARK}")
         self.__metadata.pop(del_group)
         self.write_metadata()
-        os.rename(group_path, new_group_path)
+        shutil.move(group_path, new_group_path)
 
     def dump_garbage(self):
         dirs_deleted = []
@@ -585,4 +596,4 @@ class LocalDataStorage(DataStorage):
         self.write_metadata()
         if self.current_group:
             self.current_group.group_name = new_name
-        os.rename(group_path, new_group_path)
+        shutil.move(group_path, new_group_path)

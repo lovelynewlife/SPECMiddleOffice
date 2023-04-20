@@ -64,7 +64,7 @@ class ResultsDownloader:
                 return None
 
         task_num = len(id_urls.items())
-        max_workers = min(task_num, min(32, (os.cpu_count() or 1) + 4))
+        max_workers = min(task_num + 1, min(32, (os.cpu_count() or 1) + 4))
         with trange(task_num, desc=f"Downloading {task_num} {file_type} files") as bar:
             with BoundThreadPoolExecutor(max_workers=max_workers) as executor:
                 tasks = list()
