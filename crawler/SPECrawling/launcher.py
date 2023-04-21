@@ -1,5 +1,5 @@
-from operation import Operations
-from storage import LocalDataStorage
+from SPECrawling.operation import Operations
+from SPECrawling.storage import LocalDataStorage
 
 
 class Singleton(object):

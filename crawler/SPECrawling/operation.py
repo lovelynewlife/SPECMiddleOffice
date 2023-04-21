@@ -1,5 +1,5 @@
-from executor import BenchmarkExecutor
-from storage import DataStorage, BenchmarkGroup, BenchmarkGroups
+from SPECrawling.executor import BenchmarkExecutor
+from SPECrawling.storage import DataStorage, BenchmarkGroup, BenchmarkGroups
 
 
 class OperationsHelper:
@@ -56,6 +56,10 @@ class BenchmarkGroupOperation:
                 print(f"{b}: {location}")
         except RuntimeError as err:
             print(err)
+
+    def fetch_all_catalogs(self):
+        benchmarks = self.__group.get_benchmarks()
+        self.fetch_catalogs(benchmarks)
 
     def show_supported_results_types(self, benchmark: str):
         try:
@@ -115,6 +119,15 @@ class BenchmarkGroupOperation:
         finally:
             return locations
 
+    def get_result_dir(self, benchmark: str, file_type: str):
+        res = None
+        try:
+            res = self.__executor.execute_get_result_dir(self.__group, benchmark, file_type)
+        except RuntimeError as err:
+            print(err)
+        finally:
+            return res
+
 
 class BenchmarkGroupOperationWrapper:
 
@@ -159,25 +172,37 @@ class Operations:
             raise RuntimeError("Group type is not supported.")
 
     def drop_group(self, group_name: str):
+        cur_group = self.__storage.current_group
         try:
-            cur_group_name = self.__storage.current_group.group_name
             self.__storage.delete_group(group_name)
-            if cur_group_name == group_name:
-                self.__group_op = None
             print(f"Drop {group_name} ok.")
         except RuntimeError as err:
             print(err)
+            return
+
+        if cur_group is not None:
+            if cur_group.group_name == group_name:
+                self.__group_op = None
+        else:
+            self.__group_op = None
 
     def rename_group(self, group_name: str, new_name: str):
+        cur_group = self.__storage.current_group
         try:
             self.__storage.rename_group(group_name, new_name)
-            print(f"Rename {group_name} ok.")
+            print(f"Rename {group_name} -> {new_name} ok.")
         except RuntimeError as err:
             print(err)
 
+        if cur_group is not None:
+            if cur_group.group_name == group_name:
+                self.__group_op = None
+        else:
+            self.__group_op = None
+
     def show_group(self, group_name: str):
         group_info = self.__storage.get_groups()
-        if group_info.has_key(group_name):
+        if group_name in group_info.keys():
             print(f"{group_name}: {group_info[group_name]}")
         else:
             print(f"{group_name} not exists.")
@@ -203,4 +228,4 @@ class Operations:
 
     @staticmethod
     def help():
-        print("help")
+        print("To be determined..")

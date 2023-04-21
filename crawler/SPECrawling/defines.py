@@ -4,12 +4,13 @@ BASE_DOMAIN = "https://spec.org/"
 
 
 class FileType:
+    # upper case string.
     HTML = "HTML"
     PS = "PS"
     PDF = "PDF"
     CSV = "CSV"
-    TEXT = "Text"
-    CONFIG = "Config"
+    TEXT = "TEXT"
+    CONFIG = "CONFIG"
 
 
 class GroupType:

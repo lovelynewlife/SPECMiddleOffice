@@ -3,3 +3,4 @@ crawler/venv/**
 .vscode/
 *.pyc
 .DS_Store
+*.egg_info

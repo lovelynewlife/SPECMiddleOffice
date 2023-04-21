@@ -1,8 +1,8 @@
 from urllib.parse import urljoin
 
-from downloader import ResultsDownloader
-from runner import ScrapyRunner
-from storage import BenchmarkGroup, GroupType
+from SPECrawling.downloader import ResultsDownloader
+from SPECrawling.runner import ScrapyRunner
+from SPECrawling.storage import BenchmarkGroup, GroupType
 
 GroupTypeExeMaps = {
     GroupType.OSG: "OSG",
@@ -34,7 +34,11 @@ class BenchmarkExecutor:
             raise RuntimeError(nd)
         group.read_benchmarks()
 
-        return group.get_benchmarks()
+        benchmarks = group.get_benchmarks()
+        for b in benchmarks:
+            group.verify_results_files(b)
+
+        return benchmarks
 
     def execute_fetch_catalogs(self, group: BenchmarkGroup, benchmarks):
         available = group.get_benchmarks()
@@ -74,13 +78,16 @@ class BenchmarkExecutor:
         if benchmark not in available:
             raise RuntimeError(f"Unsupported benchmark: {benchmark}")
         try:
+            group.verify_results_files(benchmark)
             res = group.get_supported_file_types(benchmark)
             return res
         except FileNotFoundError:
             raise RuntimeError(f"Benchmark {benchmark} catalog file not found.")
+        except NotADirectoryError as nd:
+            raise RuntimeError(nd)
 
     @staticmethod
-    def validate_available(group:BenchmarkGroup, benchmark, file_type):
+    def validate_available(group: BenchmarkGroup, benchmark, file_type):
         available = group.get_benchmarks()
         if benchmark not in available:
             raise RuntimeError(f"Unsupported benchmark: {benchmark}")
@@ -94,16 +101,21 @@ class BenchmarkExecutor:
 
     def execute_download_results(self, group: BenchmarkGroup, benchmark, file_type):
         self.validate_available(group, benchmark, file_type)
+        # May need capture exception
+        group.verify_results_files(benchmark)
         target_dir = group.get_results_file_dir(benchmark, file_type)
-        results_location = group.get_all_results_location(benchmark, file_type)
+        results_location = group.get_all_results_urls(benchmark, file_type)
         id_urls = dict()
         for rid, url in results_location:
-            id_urls[rid] = urljoin(self.__BASIC_DOMAIN, url)
+            if url is not None and len(url) > 0:
+                id_urls[rid] = urljoin(self.__BASIC_DOMAIN, url)
         self.downloader.download_results(target_dir, id_urls, file_type)
         group.verify_results_with_file_type(benchmark, file_type)
 
     def execute_download_lost_results(self, group: BenchmarkGroup, benchmark, file_type):
         self.validate_available(group, benchmark, file_type)
+        # May need capture exception
+        group.verify_results_files(benchmark)
         target_dir = group.get_results_file_dir(benchmark, file_type)
         try:
             results_location = group.check_lost_results_files(benchmark, file_type)
@@ -111,7 +123,8 @@ class BenchmarkExecutor:
             raise RuntimeError(fn)
         id_urls = dict()
         for _, rid, url in results_location:
-            id_urls[rid] = urljoin(self.__BASIC_DOMAIN, url)
+            if url is not None and len(url) > 0:
+                id_urls[rid] = urljoin(self.__BASIC_DOMAIN, url)
         self.downloader.download_results(target_dir, id_urls, file_type)
         group.verify_results_with_file_type(benchmark, file_type)
 
@@ -119,7 +132,7 @@ class BenchmarkExecutor:
         self.validate_available(group, benchmark, file_type)
         res = []
         try:
-            locations = group.get_results_location(benchmark, file_type, indices)
+            locations = group.get_results_locations(benchmark, file_type, indices)
             for index, path, rurl in locations:
                 res.append((index, path, urljoin(self.__BASIC_DOMAIN, rurl)))
         except FileNotFoundError as fn:
@@ -128,3 +141,9 @@ class BenchmarkExecutor:
             raise RuntimeError(nd)
         finally:
             return res
+
+    def execute_get_result_dir(self, group: BenchmarkGroup, benchmark, file_type):
+        self.validate_available(group, benchmark, file_type)
+        # May need capture exception
+        group.verify_results_files(benchmark)
+        return group.get_results_file_dir(benchmark, file_type)

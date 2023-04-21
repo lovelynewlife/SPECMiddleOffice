@@ -2,7 +2,7 @@ import csv
 import os.path
 import shutil
 
-from defines import BenchmarkGroups, GroupTypeMaps, GroupType
+from SPECrawling.defines import BenchmarkGroups, GroupTypeMaps, GroupType
 
 
 class Group:
@@ -70,10 +70,10 @@ class BenchmarkGroup(Group):
     def get_catalog_location(self, benchmark):
         raise NotImplementedError
 
-    def get_results_location(self, benchmark, indices, file_type):
+    def get_results_locations(self, benchmark, indices, file_type):
         raise NotImplementedError
 
-    def get_all_results_location(self, benchmark, file_type):
+    def get_all_results_urls(self, benchmark, file_type):
         raise NotImplementedError
 
     def rebuild_results(self, benchmark):
@@ -154,7 +154,7 @@ class LocalBenchmarkGroup(BenchmarkGroup):
         return os.path.join(self.results_path, benchmark)
 
     def get_results_file_dir(self, benchmark, filetype):
-        return os.path.join(self.get_results_path(benchmark), filetype)
+        return os.path.join(self.get_results_path(benchmark), filetype.upper())
 
     @staticmethod
     def remove_catalog_suffix(file_name):
@@ -211,7 +211,7 @@ class LocalBenchmarkGroup(BenchmarkGroup):
             csv_file = csv.DictReader(cf)
             field_names = csv_file.fieldnames
             file_types = filter(lambda x: str(x).startswith(self.__DOWNLOAD_PREFIX), field_names)
-            file_types = map(lambda x: str(x)[len(self.__DOWNLOAD_PREFIX):], file_types)
+            file_types = map(lambda x: str(x).upper()[len(self.__DOWNLOAD_PREFIX):], file_types)
 
         return list(file_types)
 
@@ -223,7 +223,7 @@ class LocalBenchmarkGroup(BenchmarkGroup):
         if os.path.exists(catalog_location):
             return catalog_location
 
-    def get_results_location(self, benchmark, file_type, indices):
+    def get_results_locations(self, benchmark, file_type, indices):
         catalog_file_path = self.get_catalog_file_path(benchmark)
         res = []
         find_indices = set([str(elem) for elem in indices])
@@ -231,11 +231,6 @@ class LocalBenchmarkGroup(BenchmarkGroup):
 
         with open(catalog_file_path, "r") as cf:
             csv_file = csv.DictReader(cf)
-            field_names = csv_file.fieldnames
-            file_types = filter(lambda x: str(x).startswith(self.__DOWNLOAD_PREFIX), field_names)
-            file_types = map(lambda x: str(x)[len(self.__DOWNLOAD_PREFIX):], file_types)
-            if str(file_type).upper() not in file_types:
-                raise FileNotFoundError("No such file type supported.")
             download_field = f"{self.__DOWNLOAD_PREFIX}{str(file_type).upper()}"
             for elem in csv_file:
                 rindex = elem[self.__INDEX]
@@ -244,21 +239,18 @@ class LocalBenchmarkGroup(BenchmarkGroup):
                 if rindex in find_indices:
                     filename = f"{rid}{suffix}"
                     full_path = os.path.join(self.get_results_file_dir(benchmark, file_type), filename)
+                    if not os.path.exists(full_path):
+                        full_path = ""
                     res.append((rindex, f"{full_path}", rurl))
 
         return res
 
-    def get_all_results_location(self, benchmark, file_type):
+    def get_all_results_urls(self, benchmark, file_type):
         catalog_file_path = self.get_catalog_file_path(benchmark)
         res = []
 
         with open(catalog_file_path, "r") as cf:
             csv_file = csv.DictReader(cf)
-            field_names = csv_file.fieldnames
-            file_types = filter(lambda x: str(x).startswith(self.__DOWNLOAD_PREFIX), field_names)
-            file_types = map(lambda x: str(x)[len(self.__DOWNLOAD_PREFIX):], file_types)
-            if str(file_type).upper() not in file_types:
-                raise FileNotFoundError("No such file type supported.")
             download_field = f"{self.__DOWNLOAD_PREFIX}{str(file_type).upper()}"
             for elem in csv_file:
                 rid = elem[self.__ID]
@@ -279,7 +271,7 @@ class LocalBenchmarkGroup(BenchmarkGroup):
             csv_file = csv.DictReader(cf)
             field_names = csv_file.fieldnames
             download_fields = filter(lambda x: str(x).startswith(self.__DOWNLOAD_PREFIX), field_names)
-            download_fields = map(lambda x: str(x)[len(self.__DOWNLOAD_PREFIX):], download_fields)
+            download_fields = map(lambda x: str(x).upper()[len(self.__DOWNLOAD_PREFIX):], download_fields)
             for field in download_fields:
                 file_type_path = os.path.join(results_dir, field)
                 os.mkdir(file_type_path)
@@ -350,13 +342,14 @@ class LocalBenchmarkGroup(BenchmarkGroup):
             csv_file = csv.DictReader(cf)
             field_names = csv_file.fieldnames
             file_types = filter(lambda x: str(x).startswith(self.__DOWNLOAD_PREFIX), field_names)
-            file_types = map(lambda x: str(x)[len(self.__DOWNLOAD_PREFIX):], file_types)
+            file_types = map(lambda x: str(x).upper()[len(self.__DOWNLOAD_PREFIX):], file_types)
             for row in csv_file:
                 result_ids.add(row[self.__ID])
 
-        results_files_dirs = map(lambda x: (f".{str(x).lower()}", self.get_results_file_dir(benchmark, x)), file_types)
+        suffix_results_files_dirs = map(lambda x: (f".{str(x).lower()}", self.get_results_file_dir(benchmark, x)),
+                                        file_types)
         dirs_creating = list()
-        for suffix, rd in results_files_dirs:
+        for suffix, rd in suffix_results_files_dirs:
             if os.path.exists(rd):
                 if not os.path.isdir(rd):
                     raise NotADirectoryError(f"{rd} is not a dir.")
@@ -367,7 +360,7 @@ class LocalBenchmarkGroup(BenchmarkGroup):
             os.makedirs(elem)
 
         files_removing = list()
-        for suffix, rd in results_files_dirs:
+        for suffix, rd in suffix_results_files_dirs:
             results_files = os.listdir(rd)
             for f in results_files:
                 if f[:-len(suffix)] not in result_ids:
@@ -389,11 +382,6 @@ class LocalBenchmarkGroup(BenchmarkGroup):
         results = set()
         with open(catalog_file_path, "r") as cf:
             csv_file = csv.DictReader(cf)
-            field_names = csv_file.fieldnames
-            file_types = filter(lambda x: str(x).startswith(self.__DOWNLOAD_PREFIX), field_names)
-            file_types = map(lambda x: str(x)[len(self.__DOWNLOAD_PREFIX):], file_types)
-            if str(file_type).upper() not in file_types:
-                raise FileNotFoundError("No such file type supported.")
             download_field = f"{self.__DOWNLOAD_PREFIX}{str(file_type).upper()}"
             for row in csv_file:
                 results.add((int(row[self.__INDEX]), row[self.__ID], row[download_field]))
@@ -523,10 +511,7 @@ class LocalDataStorage(DataStorage):
 
     @property
     def current_group(self):
-        if self.__group:
-            return self.__group
-        else:
-            return None
+        return self.__group
 
     def create_group(self, group_name, group_type):
         for gname, gtype in self.__metadata.items():
@@ -591,9 +576,9 @@ class LocalDataStorage(DataStorage):
         if os.path.exists(new_group_path):
             raise RuntimeError(f"storage in {new_group_path} already existed.")
 
+        if self.current_group and self.current_group.group_name == group_name:
+            self.__group = None
         self.__metadata[new_name] = re_group_type
         self.__metadata.pop(re_group)
         self.write_metadata()
-        if self.current_group:
-            self.current_group.group_name = new_name
         shutil.move(group_path, new_group_path)

@@ -81,7 +81,7 @@ class FetchCatalogPipeline:
             id_candidates = []
             for link in links:
                 # add Download prefix
-                field_name = self.download_mark + link.xpath("./text()")[0].strip()
+                field_name = self.download_mark + link.xpath("./text()")[0].strip().upper()
                 field_names_delta.add(field_name)
                 download_path = link.xpath("./@href")[0]
                 elem[field_name] = download_path
