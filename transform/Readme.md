@@ -7,7 +7,9 @@ Transforms on SPEC Raw Data using PySpark.
 3. Only SPEC CPU2007 Benchmark results are transformed.
 
 ## Requirements
-* Python
-* PySpark
-* Notebook
-* MongoDB
+* MongoDB server
+* Spark (Distribution) (Optional, Local is enough.)
+* SPECrawling in the [project]/crawler dir. 
+```shell
+pip install jupyter pyspark pandas
+```
