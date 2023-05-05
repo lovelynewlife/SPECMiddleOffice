@@ -18,7 +18,7 @@ pip install .
 ```
 ```shell
 sudo apt install default-jdk
-pip install jupyter pyspark pandas requests matplotlib
+pip install jupyter pyspark pandas requests matplotlib beautifulsoup4 lxml
 ```
 
 ## Structure
