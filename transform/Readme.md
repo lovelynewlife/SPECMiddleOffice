@@ -13,6 +13,9 @@ Transforms on SPEC Raw Data using PySpark.
 
 On Ubuntu 20.04
 ```shell
+pip install pymongo loguru
+```
+```shell
 cd crawler
 pip install .
 ```
