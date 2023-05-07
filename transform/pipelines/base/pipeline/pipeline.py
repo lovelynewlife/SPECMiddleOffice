@@ -20,7 +20,7 @@ class Pipeline:
         return f"Pipeline:{Pipeline.NAME}"
 
 
-class PipelineChains(Pipeline):
+class PipelineChain(Pipeline):
     NAME = "PipelineChains"
 
     def __init__(self):
