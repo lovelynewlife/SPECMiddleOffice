@@ -1,0 +1,7 @@
+admin user:
+username: SPECDataAdmin
+password: SPECDataSource123456
+
+ODS_SPEC_OSG_CPU2017 root user:
+username: ODS_SPEC_OSG_CPU2017_Root
+password: SPECOSGCPU2017Root123456
