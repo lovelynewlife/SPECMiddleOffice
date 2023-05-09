@@ -98,14 +98,16 @@ def html_parse(html_contents):
 
         info_tables_dict = {}
         for info_table in sys_info_tables:
-            info_table_head = info_table.find(name='thead').getText().strip()
+            table_head = info_table.find(name='thead')
+            info_table_head = trim_empties.sub("_", table_head.getText().strip()).lower()
 
             info_table_body = info_table.find(name='tbody')
             info_pairs = info_table_body.find_all(name="tr")
 
             info_table_body_dict = {}
             for pair in info_pairs:
-                info_k = pair.find(name='th').getText().replace(':', '').strip()
+                info_k = pair.find(name='th').getText().replace(':', '').strip(".").strip()
+                info_k = trim_empties.sub("_", info_k).lower()
                 info_v = pair.find(name='td').getText().strip()
                 info_table_body_dict[info_k] = info_v
 
@@ -119,7 +121,7 @@ def html_parse(html_contents):
         result_tables = list(
             zip((trim_empties.sub(" ", elem.getText()).strip() for elem in result_table_titles), result_tables_soup))
 
-        benchmark_header = "Benchmark"
+        benchmark_header = "benchmark"
         base_header = "base"
         peak_header = "peak"
 
@@ -128,7 +130,7 @@ def html_parse(html_contents):
         for title, table_soup in result_tables:
             if base_header in title.lower() or peak_header in title.lower():
                 headers = table_soup.find(name="thead")
-                headers = list(trim_empties.sub(" ", elem.getText()).strip() for elem in headers.find_all("th"))
+                headers = list(trim_empties.sub("_", elem.getText().strip()).lower() for elem in headers.find_all("th"))
 
                 result_table_rows = []
                 body = table_soup.find(name="tbody")
@@ -160,7 +162,7 @@ def html_parse(html_contents):
                     col_headers = [benchmark_header]
                     col_headers_soup = col_headers_soup.select(f"th.{result_type}col")
                     for elem in col_headers_soup:
-                        col_headers.append(trim_empties.sub(" ", elem.getText()).strip())
+                        col_headers.append(trim_empties.sub("_", elem.getText().strip()).lower())
 
                     body_soup = table_soup.find(name='tbody')
                     rows_soup = body_soup.find_all(name='tr')
@@ -193,6 +195,7 @@ def html_parse(html_contents):
         for note_soup in notes_soup:
             note_title = note_soup.find(name="h2")
             note_title = note_title.getText().strip()
+            note_title = trim_empties.sub("_", note_title).lower()
             note_contents = note_soup.find_all(name='pre')
             note_content = ""
 
@@ -210,6 +213,7 @@ def html_parse(html_contents):
         for note_soup in flag_notes_soup:
             note_title = note_soup.find(name="h2")
             note_title = note_title.getText().strip()
+            note_title = trim_empties.sub("_", note_title).lower()
             note_content = note_soup.getText()
 
             flag_notes_dict[note_title] = note_content
@@ -243,8 +247,6 @@ def html_result_extract_clean_app(file_path: IOHandler, sink: IOHandler):
     id_mapper = files_rdd.map(lambda x: (x[0].split("/")[-1].replace(".html", ""), x[1]))
 
     html_parser = id_mapper.mapPartitions(lambda it: html_parse(it))
-
-    html_parser.sample(False, 0.4, 1)
 
     html_parser.foreachPartition(lambda it: save_to_mongo_wrapper(sink)(it))
 
