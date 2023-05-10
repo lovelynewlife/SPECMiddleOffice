@@ -14,6 +14,6 @@ setup(
     package_data={
         '': ['*.cfg', 'static/*', "static/helper/*"]
     },
-    install_requires=['scrapy', "tqdm", "lxml"],
+    install_requires=['scrapy', "tqdm", "lxml", "ipython"],
     entry_points={"console_scripts": ["specrawling = SPECrawling.cmdline:main"]}
 )
