@@ -1,0 +1,8 @@
+## Storage Operation
+SPEC.op.use_group(self, group_name: str)
+SPEC.op.drop_group(self, group_name: str)
+SPEC.op.rename_group(self, group_name: str, new_name: str)
+SPEC.op.show_group(self, group_name: str)
+SPEC.op.list_groups(self)
+SPEC.op.create_group(self, group_name: str, group_type: int)
+SPEC.op.dump_garbage(self, confirm: bool = False)

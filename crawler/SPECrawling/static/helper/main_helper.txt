@@ -1,0 +1,2 @@
+## Launcher
+SPEC.open(self, data_path, mode="local")

@@ -1,3 +1,5 @@
+import os
+
 from SPECrawling.executor import BenchmarkExecutor
 from SPECrawling.storage import DataStorage, BenchmarkGroup, BenchmarkGroups
 
@@ -128,6 +130,16 @@ class BenchmarkGroupOperation:
         finally:
             return res
 
+    @staticmethod
+    def help():
+        helper_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "helper")
+        helper_file_path = os.path.join(helper_dir, "group_helper.txt")
+
+        with open(helper_file_path) as file:
+            helper = file.read()
+
+        print(helper)
+
 
 class BenchmarkGroupOperationWrapper:
 
@@ -228,4 +240,10 @@ class Operations:
 
     @staticmethod
     def help():
-        print("To be determined..")
+        helper_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "helper")
+        helper_file_path = os.path.join(helper_dir, "op_helper.txt")
+
+        with open(helper_file_path) as file:
+            helper = file.read()
+
+        print(helper)

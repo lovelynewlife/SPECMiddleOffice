@@ -1,3 +1,5 @@
+import os
+
 from SPECrawling.operation import Operations
 from SPECrawling.storage import LocalDataStorage
 
@@ -43,6 +45,16 @@ class Launcher(Singleton):
         else:
             print(f"Unsupported mode:{mode}.")
             return
+
+    @staticmethod
+    def help():
+        helper_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "helper")
+        helper_file_path = os.path.join(helper_dir, "main_helper.txt")
+
+        with open(helper_file_path) as file:
+            helper = file.read()
+
+        print(helper)
 
 
 __SPEC = Launcher()

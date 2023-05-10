@@ -28,7 +28,7 @@ class ResultsDownloader:
 
     @staticmethod
     def do_save(file_id, result_place_dir, file_type, bar):
-        def save(content):
+        def local_save(content):
             res = content.result()
             file_name = f"{file_id}.{file_type.lower()}"
             if res:
@@ -43,7 +43,7 @@ class ResultsDownloader:
 
             bar.update()
 
-        return save
+        return local_save
 
     def download_results(self, result_place_dir, id_urls: dict, file_type: str):
         assert os.path.isdir(result_place_dir)

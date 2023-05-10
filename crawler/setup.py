@@ -7,11 +7,13 @@ setup(
     url='https://github.com/lovelynewlife/SPECMiddleOffice',
     license='',
     author='AhoyZhang',
+    python_requires=">=3.7",
     author_email='',
     description='It\'s a crawler tool for spec.org.',
     data_files=[],
     package_data={
-        '': ['*.cfg']
+        '': ['*.cfg', 'static/*', "static/helper/*"]
     },
-    install_requires=['scrapy', "tqdm", "lxml"]
+    install_requires=['scrapy', "tqdm", "lxml"],
+    entry_points={"console_scripts": ["specrawling = SPECrawling.cmdline:main"]}
 )

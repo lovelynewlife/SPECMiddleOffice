@@ -7,16 +7,23 @@ import pyspark.sql.types as pyspark_types
 from loguru import logger
 
 NULL_STRING = "<null>"
+pg_url = "jdbc:postgresql://localhost:5432/spec_dwd"
+pg_user = "spec_dwd_admin"
+pg_password = "SPEC_DWD_Admin123456"
+pg_jdbc_jar = "./resources/postgresql-42.6.0.jar"
+
+mongo_uri = "mongodb://ODS_SPEC_OSG_CPU2017_Reader:SPECOSGCPU2017Reader123456@192.168.137.128:27017" \
+            "/ODS_SPEC_OSG_CPU2017"
+html_results_sample_size = 10000
 
 
 def write_df2db(df2write, table_suffix):
-    pg_url = "jdbc:postgresql://localhost:5432/spec_dwd"
     table_name = f"dwd_cpu2017_{table_suffix}"
     options = {
         "url": pg_url,
         "dbtable": table_name,
-        "user": "spec_dwd_admin",
-        "password": "SPEC_DWD_Admin123456",
+        "user": pg_user,
+        "password": pg_password,
         "driver": "org.postgresql.Driver",
         "numPartitions": 20,
 
@@ -145,11 +152,6 @@ def flatten_results(benchmark_type="base"):
 
 
 def run_cpu2017_dwd():
-    mongo_uri = "mongodb://ODS_SPEC_OSG_CPU2017_Reader:SPECOSGCPU2017Reader123456@192.168.137.128:27017" \
-                "/ODS_SPEC_OSG_CPU2017"
-
-    pg_jdbc_jar = "/home/uw1/SPECMiddleOffice/transform/resources/postgresql-42.6.0.jar"
-
     conf = SparkConf()
     conf.setAppName("cpu2017_dwd")
     conf.setMaster("local[*]")
@@ -163,7 +165,8 @@ def run_cpu2017_dwd():
     catalog_df = spark.read.format("mongodb").option("collection", "Catalog").load()
     catalog_df.createOrReplaceTempView("Catalog")
 
-    html_results_df = spark.read.format("mongodb").option("collection", "HTML_Results").load()
+    html_results_df = spark.read.format("mongodb").option("collection", "HTML_Results")\
+        .option("sampleSize", html_results_sample_size).load()
     html_results_df.createOrReplaceTempView("HTML_Results")
 
     benchmark_summary_facts_from_catalog_columns = [
@@ -180,7 +183,7 @@ def run_cpu2017_dwd():
             "updated_date_month": extract_month_from_date(pyspark_funcs.col("updated_date")),
             "test_date_year": extract_year_from_date(pyspark_funcs.col("test_date")),
             "test_date_month": extract_month_from_date(pyspark_funcs.col("test_date")),
-            "published_date_year": extract_month_from_date(pyspark_funcs.col("published_date")),
+            "published_date_year": extract_year_from_date(pyspark_funcs.col("published_date")),
             "published_date_month": extract_month_from_date(pyspark_funcs.col("published_date")),
         }
     )
@@ -192,7 +195,7 @@ def run_cpu2017_dwd():
         "result_id", "system", "hardware_vendor", "hardware_avail_date",
         "processor", "memory", "storage", "cache_1st_level", "cache_2nd_level",
         "cache_3rd_level", "other_cache", "processor_MHZ", "number_of_chips", "number_of_cores",
-        "CPUs_orderable"
+        "number_of_enabled_threads_per_core", "CPUs_orderable"
     ]
     system_hardware_info_from_html_columns = [
         "cpu_name", "enabled", "max_mhz", "nominal"
@@ -253,6 +256,8 @@ def run_cpu2017_dwd():
             "other": null_standardize(pyspark_funcs.col("other")),
             "power_management": null_standardize(pyspark_funcs.col("power_management")),
             "system_state": null_standardize(pyspark_funcs.col("system_state")),
+            "software_avail_date_year": extract_year_from_date(pyspark_funcs.col("software_avail_date")),
+            "software_avail_date_month": extract_month_from_date(pyspark_funcs.col("software_avail_date"))
         }
     )
 
@@ -367,8 +372,9 @@ def run_cpu2017_dwd():
 
     write_df2db(ordinary_notes_df, "ordinary_notes")
 
-    flag_notes_df = spark.sql("SELECT result_id, ordinary_notes.* "
-                              "FROM HTML_Results where ordinary_notes is not null;")
+    flag_notes_df = spark.sql("SELECT result_id, flag_notes.* "
+                              "FROM HTML_Results "
+                              "where flag_notes is not null;")
     flag_notes_df = flag_notes_df.rdd.map(lambda x: trim_null(x)).toDF()
 
     write_df2db(flag_notes_df, "flag_notes")
