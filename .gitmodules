@@ -1,0 +1,3 @@
+[submodule "portal/superset"]
+	path = portal/superset
+	url = git@github.com:lovelynewlife/superset.git
