@@ -78,7 +78,7 @@ def catalog_clean_pandas_func(catalog_file: IOHandler, sink: IOHandler):
     output_dict = clean_df.to_dict('records')
 
     logger.info("Exporting clean catalog file to mongodb..")
-    sink.write(output_dict, drop_collection=True)
+    sink.write(output_dict)
 
     logger.info("Done.")
 

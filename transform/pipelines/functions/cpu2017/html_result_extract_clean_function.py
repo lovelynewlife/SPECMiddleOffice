@@ -230,7 +230,7 @@ def save_to_mongo_wrapper(sink: IOHandler):
             sink_results.append(parse_result)
 
         logger.info(f"{len(sink_results)} docs has sink to mongo.")
-        sink.write(sink_results, drop_collection=False)
+        sink.write(sink_results)
 
     return save_to_mongo
 

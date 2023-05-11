@@ -13,6 +13,21 @@ class PyMongoHandler(IOHandler):
         db_config_param, = args
         self._db_config.update(db_config_param)
 
+        self._overwrite()
+
+    def _overwrite(self):
+        connection_string = self._get_connection_string()
+
+        db_name = self._db_config["db_name"]
+        table_name = self._db_config["table_name"]
+        db_connection = pymongo.MongoClient(connection_string)
+
+        mdb = db_connection[db_name]
+
+        mdb.drop_collection(table_name)
+
+        db_connection.close()
+
     def _get_connection_string(self):
         host = self._db_config["host"]
         port = self._db_config["port"]
@@ -31,16 +46,13 @@ class PyMongoHandler(IOHandler):
         table_name = self._db_config["table_name"]
         db_connection = pymongo.MongoClient(connection_string)
 
-        def insert_docs(drop_collection=False, **others):
-
+        def insert_docs(**others):
             mdb = db_connection[db_name]
-
-            if drop_collection:
-                mdb.drop_collection(table_name)
 
             collection = mdb[table_name]
             if contents is not None:
                 collection.insert_many(contents)
+
         try:
             insert_docs(**kwargs)
         except Exception as e:
