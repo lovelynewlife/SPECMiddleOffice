@@ -18,7 +18,7 @@ html_results_sample_size = 10000
 
 
 def write_df2db(df2write, table_suffix):
-    table_name = f"dwd_cpu2017_{table_suffix}"
+    table_name = f"dwd_benchmark_cpu_{table_suffix}"
     options = {
         "url": pg_url,
         "dbtable": table_name,
@@ -28,7 +28,7 @@ def write_df2db(df2write, table_suffix):
         "numPartitions": 20,
 
     }
-    df2write.write.format("jdbc").options(**options).mode("overwrite").save()
+    df2write.write.format("jdbc").options(**options).mode("append").save()
 
     logger.info(f"Write to table: {table_name}")
 
