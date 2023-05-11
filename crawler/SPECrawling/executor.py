@@ -35,8 +35,6 @@ class BenchmarkExecutor:
         group.read_benchmarks()
 
         benchmarks = group.get_benchmarks()
-        for b in benchmarks:
-            group.verify_results_files(b)
 
         return benchmarks
 
